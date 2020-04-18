@@ -9,7 +9,6 @@ def quote(str, prefix = "> ")
   prefix + str.gsub("\n", "\n#{prefix}")
 end
 
-
 def run_command(command, args = [])
   path = command
   res, err, code = Open3.capture3("#{Shellwords.join([path.to_s] + args)}")
@@ -48,7 +47,7 @@ class KVSPRunner
   end
 end
 
-def benchmark_kvsp(id, kvsp, elf_path, enable_gpu, cmd_options=[])
+def benchmark_kvsp(id, kvsp, elf_path, enable_gpu, cmd_options = [])
   emu_res = kvsp.run id, (["emu", elf_path] + cmd_options)
   raise "cycle estimation failed" unless emu_res =~ /^#cycle\t([0-9]+)$/
   num_cycles = $1
@@ -75,11 +74,11 @@ runners["v11"] = KVSPRunner.new "kvsp_v11" # With emerald
 #runners["v5"] = KVSPRunner.new "kvsp_v5"   # CB on CPU for ROM and RAM without CUDA
 #runners["v3"] = KVSPRunner.new "kvsp_v3"   # Naive implementation on CPU and CUDA
 
-8.times do
+10.times do
   runners.each do |name, runner|
     benchmark_kvsp "#{name}_01_fib_gpu", runner, "elf/01_fib", true, ["5"]
     benchmark_kvsp "#{name}_02_hamming_gpu", runner, "elf/02_hamming", true,
-	           ["10", "10", "10", "10", "de", "ad", "be", "ef"]
+                   ["10", "10", "10", "10", "de", "ad", "be", "ef"]
     benchmark_kvsp "#{name}_03_bf_gpu", runner, "elf/03_bf", true, ["++++[>++++++++++<-]>++"]
   end
 end
