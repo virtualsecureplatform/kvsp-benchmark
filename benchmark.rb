@@ -66,6 +66,17 @@ end
 
 Logger.open(Time.now.strftime "%Y%m%d_%H%M.log")
 
+mode = "cpu"
+enable_gpu = false
+
+if ARGV[0] == "gpu" then
+  mode = "gpu"
+  enable_gpu = "true"
+  print("GPU mode")
+else
+  print("CPU mode")
+end
+
 runners = {}
 runners["v11"] = KVSPRunner.new "kvsp_v11" # With emerald
 #runners["v10"] = KVSPRunner.new "kvsp_v10" # With emerald
@@ -76,9 +87,9 @@ runners["v11"] = KVSPRunner.new "kvsp_v11" # With emerald
 
 10.times do
   runners.each do |name, runner|
-    benchmark_kvsp "#{name}_01_fib_gpu", runner, "elf/01_fib", true, ["5"]
-    benchmark_kvsp "#{name}_02_hamming_gpu", runner, "elf/02_hamming", true,
+    benchmark_kvsp "#{name}_01_fib_#{mode}", runner, "elf/01_fib", enable_gpu, ["5"]
+    benchmark_kvsp "#{name}_02_hamming_#{mode}", runner, "elf/02_hamming",enable_gpu,
                    ["10", "10", "10", "10", "de", "ad", "be", "ef"]
-    benchmark_kvsp "#{name}_03_bf_gpu", runner, "elf/03_bf", true, ["++++[>++++++++++<-]>++"]
+    benchmark_kvsp "#{name}_03_bf_#{mode}", runner, "elf/03_bf", enable_gpu, ["++++[>++++++++++<-]>++"]
   end
 end

@@ -13,4 +13,4 @@ kvsp_v11/bin/kvsp cc ../01-fib.c -o elf/01_fib
 kvsp_v11/bin/kvsp cc ../02-hamming.c -o elf/02_hamming
 kvsp_v11/bin/kvsp cc ../03-bf.c -o elf/03_bf
 
-ruby ../benchmark.rb
+ruby ../benchmark.rb $1
