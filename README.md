@@ -11,5 +11,6 @@ GPU mode
 # Dependency
 Ubuntu
 ```
-sudo apt install ruby libgoogle-perftools-dev
+sudo apt update
+sudo apt install ruby libgoogle-perftools-dev libomp-dev
 ```
