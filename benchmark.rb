@@ -4,6 +4,7 @@ require "shellwords"
 require "open3"
 require "pathname"
 require "csv"
+require "optparse"
 
 def quote(str, prefix = "> ")
   prefix + str.gsub("\n", "\n#{prefix}")
@@ -47,7 +48,7 @@ class KVSPRunner
   end
 end
 
-def benchmark_kvsp(id, kvsp, elf_path, enable_gpu, cmd_options = [])
+def benchmark_kvsp(id, kvsp, elf_path, num_gpus, cmd_options = [])
   emu_res = kvsp.run id, (["emu", elf_path] + cmd_options)
   raise "cycle estimation failed" unless emu_res =~ /^#cycle\t([0-9]+)$/
   num_cycles = $1
@@ -55,8 +56,7 @@ def benchmark_kvsp(id, kvsp, elf_path, enable_gpu, cmd_options = [])
 
   kvsp.run id, ["genkey", "-o", "_secret.key"]
   kvsp.run id, (["enc", "-k", "_secret.key", "-i", elf_path, "-o", "_req.packet"] + cmd_options)
-  kvsp.run id, ["run", "-i", "_req.packet", "-o", "_res.packet", "-c", num_cycles] +
-               (enable_gpu ? ["-g"] : [])
+  kvsp.run id, ["run", "-i", "_req.packet", "-o", "_res.packet", "-c", num_cycles, "-g", num_gpus]
   kvsp.run id, ["dec", "-k", "_secret.key", "-i", "_res.packet"]
 
   ctxt_size = run_command "du", ["-b", "_req.packet"]
@@ -66,30 +66,25 @@ end
 
 Logger.open(Time.now.strftime "%Y%m%d_%H%M.log")
 
-mode = "cpu"
-enable_gpu = false
-
-if ARGV[0] == "gpu" then
-  mode = "gpu"
-  enable_gpu = "true"
-  print("GPU mode")
-else
-  print("CPU mode")
-end
+num_gpus = 0
+opt = OptionParser.new
+opt.on("-g NGPUS") { |v| num_gpus = v.to_i }
+opt.parse!(ARGV)
 
 runners = {}
-runners["v11"] = KVSPRunner.new "kvsp_v11" # With emerald
+runners["v12"] = KVSPRunner.new "kvsp_v12" # With emerald
 #runners["v10"] = KVSPRunner.new "kvsp_v10" # With emerald
 #runners["v9"] = KVSPRunner.new "kvsp_v9"   # CB on CPU for RAM with CUDA
 #runners["v8"] = KVSPRunner.new "kvsp_v8"   # CB on CPU for ROM with CUDA
 #runners["v5"] = KVSPRunner.new "kvsp_v5"   # CB on CPU for ROM and RAM without CUDA
 #runners["v3"] = KVSPRunner.new "kvsp_v3"   # Naive implementation on CPU and CUDA
 
+mode = if num_gpus > 0 then "#{num_gpus}gpu" else "cpu" end
 10.times do
   runners.each do |name, runner|
-    benchmark_kvsp "#{name}_01_fib_#{mode}", runner, "elf/01_fib", enable_gpu, ["5"]
-    benchmark_kvsp "#{name}_02_hamming_#{mode}", runner, "elf/02_hamming",enable_gpu,
+    benchmark_kvsp "#{name}_01_fib_#{mode}", runner, "elf/01_fib", num_gpus, ["5"]
+    benchmark_kvsp "#{name}_02_hamming_#{mode}", runner, "elf/02_hamming", num_gpus,
                    ["10", "10", "10", "10", "de", "ad", "be", "ef"]
-    benchmark_kvsp "#{name}_03_bf_#{mode}", runner, "elf/03_bf", enable_gpu, ["++++[>++++++++++<-]>++"]
+    benchmark_kvsp "#{name}_03_bf_#{mode}", runner, "elf/03_bf", num_gpus, ["++++[>++++++++++<-]>++"]
   end
 end
