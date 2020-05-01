@@ -34,11 +34,43 @@ class Logger
 end
 
 class KVSPRunner
-  def initialize(path)
-    @kvsp_path = (Pathname.new(path) / "bin" / "kvsp").to_s
+  def initialize(version:, superscalar:, num_gpus:)
+    @kvsp_path = (Pathname.new("kvsp_v#{version}") / "bin" / "kvsp").to_s
+    @cahp_proc = superscalar ? "emerald" : "diamond"
+    @cahp_proc_llvm = superscalar ? "emerald" : "generic"
+    @num_gpus = num_gpus
+    #@use_cmux_memory = use_cmux_memory
+
+    @id_prefix = "v#{version}_#{@cahp_proc}_#{@num_gpus}gpus_"
   end
 
-  def run(id, args = [])
+  def bench(c_path, cmd_options)
+    id = @id_prefix + c_path.basename(".*").to_s
+
+    # Compile
+    kvsp_run id, ["cc", c_path.to_s, "-o", "_elf", "-mcpu=#{@cahp_proc_llvm}"]
+
+    # Emulate to get necessary # of cycles
+    emu_res = kvsp_run id, ["emu", "_elf"], cmd_options
+    raise "cycle estimation failed" unless emu_res =~ /^#cycle\t([0-9]+)$/
+    num_cycles = $1
+    Logger.log [id, "num_cycles", num_cycles]
+
+    # Run
+    kvsp_run id, ["genkey", "-o", "_secret.key"]
+    kvsp_run id, ["enc", "-k", "_secret.key", "-i", "_elf", "-o", "_req.packet"], cmd_options
+    kvsp_run id, ["run", "-i", "_req.packet", "-o", "_res.packet", "-c", num_cycles, "-g", @num_gpus]
+    kvsp_run id, ["dec", "-k", "_secret.key", "-i", "_res.packet"]
+
+    ctxt_size = run_command "du", ["-b", "_req.packet"]
+    raise "du failed" unless ctxt_size =~ /^([0-9]+)\t_req\.packet$/
+    Logger.log [id, "ctxt_size", $1]
+  end
+
+  private
+
+  def kvsp_run(id, args0 = [], args1 = [])
+    args = args0 + args1
     start_time = Time.now
     res = run_command @kvsp_path, args
     end_time = Time.now
@@ -48,43 +80,33 @@ class KVSPRunner
   end
 end
 
-def benchmark_kvsp(id, kvsp, elf_path, num_gpus, cmd_options = [])
-  emu_res = kvsp.run id, (["emu", elf_path] + cmd_options)
-  raise "cycle estimation failed" unless emu_res =~ /^#cycle\t([0-9]+)$/
-  num_cycles = $1
-  Logger.log [id, "num_cycles", num_cycles]
-
-  kvsp.run id, ["genkey", "-o", "_secret.key"]
-  kvsp.run id, (["enc", "-k", "_secret.key", "-i", elf_path, "-o", "_req.packet"] + cmd_options)
-  kvsp.run id, ["run", "-i", "_req.packet", "-o", "_res.packet", "-c", num_cycles, "-g", num_gpus]
-  kvsp.run id, ["dec", "-k", "_secret.key", "-i", "_res.packet"]
-
-  ctxt_size = run_command "du", ["-b", "_req.packet"]
-  raise "du failed" unless ctxt_size =~ /^([0-9]+)\t_req\.packet$/
-  Logger.log [id, "ctxt_size", $1]
-end
-
 Logger.open(Time.now.strftime "%Y%m%d_%H%M.log")
 
+# Parse command-line options
+# Default is all off
+version = nil
 num_gpus = 0
+superscalar = false
+cmux_memory = false
 opt = OptionParser.new
-opt.on("-g NGPUS") { |v| num_gpus = v.to_i }
+opt.on("--kvsp-ver VERSION") { |v| version = v.to_i }
+opt.on("-g NGPUS") { |v| num_gpus = v.to_i }  # GPU
+opt.on("--superscalar") { |v| superscalar = v } # super-scalar
+opt.on("--cmux-memory") { |v| cmux_memory = v } # CMUX Memory # FIXME
 opt.parse!(ARGV)
+raise "Specify KVSP version with option --kvsp-ver" if version.nil?
 
-runners = {}
-runners["v12"] = KVSPRunner.new "kvsp_v12" # With emerald
-#runners["v10"] = KVSPRunner.new "kvsp_v10" # With emerald
-#runners["v9"] = KVSPRunner.new "kvsp_v9"   # CB on CPU for RAM with CUDA
-#runners["v8"] = KVSPRunner.new "kvsp_v8"   # CB on CPU for ROM with CUDA
-#runners["v5"] = KVSPRunner.new "kvsp_v5"   # CB on CPU for ROM and RAM without CUDA
-#runners["v3"] = KVSPRunner.new "kvsp_v3"   # Naive implementation on CPU and CUDA
+# Prepare
+runner = KVSPRunner.new(version: version,
+                        superscalar: superscalar,
+                        num_gpus: num_gpus)
+program_and_data = [
+  ["01_fib.c", ["5"]],
+  ["02_hamming.c", ["10", "10", "10", "10", "de", "ad", "be", "ef"]],
+  ["03_bf.c", ["++++[>++++++++++<-]>++"]],
+].map { |p| [Pathname.new(p[0]), p[1]] }
 
-mode = if num_gpus > 0 then "#{num_gpus}gpu" else "cpu" end
-10.times do
-  runners.each do |name, runner|
-    benchmark_kvsp "#{name}_01_fib_#{mode}", runner, "elf/01_fib", num_gpus, ["5"]
-    benchmark_kvsp "#{name}_02_hamming_#{mode}", runner, "elf/02_hamming", num_gpus,
-                   ["10", "10", "10", "10", "de", "ad", "be", "ef"]
-    benchmark_kvsp "#{name}_03_bf_#{mode}", runner, "elf/03_bf", num_gpus, ["++++[>++++++++++<-]>++"]
-  end
+# Run
+program_and_data.each do |p|
+  runner.bench *p
 end

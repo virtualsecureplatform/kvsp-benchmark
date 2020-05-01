@@ -1,2 +1,5 @@
 tmp
 *.log
+_*
+kvsp.tar.gz
+kvsp_v*
