@@ -35,7 +35,7 @@ end
 
 class KVSPRunner
   def initialize(version:, superscalar:, num_gpus:)
-    @kvsp_path = (Pathname.new("kvsp_v#{version}") / "bin" / "kvsp").to_s
+    @kvsp_path = Pathname.new("kvsp_v#{version}")
     @cahp_proc = superscalar ? "emerald" : "diamond"
     @cahp_proc_llvm = superscalar ? "emerald" : "generic"
     @num_gpus = num_gpus
@@ -48,10 +48,12 @@ class KVSPRunner
     id = @id_prefix + c_path.basename(".*").to_s
 
     # Compile
-    kvsp_run id, ["cc", c_path.to_s, "-o", "_elf", "-mcpu=#{@cahp_proc_llvm}"]
+    #kvsp_run id, ["cc", c_path.to_s, "-o", "_elf", "-mcpu=#{@cahp_proc_llvm}"]
+    kvsp_run id, ["cc", c_path.to_s, "-o", "_elf"]
+    Logger.log [id, "elf_text_size", get_elf_text_size("_elf")]
 
     # Emulate to get necessary # of cycles
-    emu_res = kvsp_run id, ["emu", "_elf"], cmd_options
+    emu_res = kvsp_run id, ["emu", "--cahp-cpu", @cahp_proc, "_elf"], cmd_options
     raise "cycle estimation failed" unless emu_res =~ /^#cycle\t([0-9]+)$/
     num_cycles = $1
     Logger.log [id, "num_cycles", num_cycles]
@@ -59,7 +61,7 @@ class KVSPRunner
     # Run
     kvsp_run id, ["genkey", "-o", "_secret.key"]
     kvsp_run id, ["enc", "-k", "_secret.key", "-i", "_elf", "-o", "_req.packet"], cmd_options
-    kvsp_run id, ["run", "-i", "_req.packet", "-o", "_res.packet", "-c", num_cycles, "-g", @num_gpus]
+    kvsp_run id, ["run", "-i", "_req.packet", "-o", "_res.packet", "-c", num_cycles, "-g", @num_gpus, "--cahp-cpu", @cahp_proc]
     kvsp_run id, ["dec", "-k", "_secret.key", "-i", "_res.packet"]
 
     ctxt_size = run_command "du", ["-b", "_req.packet"]
@@ -72,11 +74,20 @@ class KVSPRunner
   def kvsp_run(id, args0 = [], args1 = [])
     args = args0 + args1
     start_time = Time.now
-    res = run_command @kvsp_path, args
+    res = run_command (@kvsp_path / "bin" / "kvsp").to_s, args
     end_time = Time.now
     elapsed = end_time - start_time
     Logger.log [id, args[0], elapsed]
     res
+  end
+
+  def get_elf_text_size(path)
+    readelf = run_command (@kvsp_path / "bin" / "llvm-readelf").to_s, ["-S", "_elf"]
+    line = readelf.lines.filter { |line| line.include?(" .text ") }[0]
+    raise "Invalid readelf result" if line.nil?
+    size = line.split(/ +/)[7]
+    raise "Invalid readelf result" if size.nil?
+    size.to_i(16)
   end
 end
 
