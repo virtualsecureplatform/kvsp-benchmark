@@ -5,6 +5,7 @@ require "open3"
 require "pathname"
 require "csv"
 require "optparse"
+require "json"
 
 def quote(str, prefix = "> ")
   prefix + str.gsub("\n", "\n#{prefix}")
@@ -18,7 +19,12 @@ def run_command(command, args = [])
 end
 
 class Logger
+  def self.path
+    @@path
+  end
+
   def self.open(path)
+    @@path = path
     @@csv = CSV.open(path, "wb")
   end
 
@@ -41,7 +47,7 @@ class KVSPRunner
     @num_gpus = num_gpus
     #@use_cmux_memory = use_cmux_memory
 
-    @id_prefix = "v#{version}_#{@cahp_proc}_#{@num_gpus}gpus_"
+    @id_prefix = "v#{version}_#{@cahp_proc}_#{@num_gpus}gpu_"
   end
 
   def bench(c_path, cmd_options)
@@ -91,8 +97,6 @@ class KVSPRunner
   end
 end
 
-Logger.open(Time.now.strftime "%Y%m%d_%H%M.log")
-
 # Parse command-line options
 # Default is all off
 version = nil
@@ -108,6 +112,7 @@ opt.parse!(ARGV)
 raise "Specify KVSP version with option --kvsp-ver" if version.nil?
 
 # Prepare
+Logger.open(Time.now.strftime "%Y%m%d_%H%M.log")
 runner = KVSPRunner.new(version: version,
                         superscalar: superscalar,
                         num_gpus: num_gpus)
@@ -120,4 +125,22 @@ program_and_data = [
 # Run
 program_and_data.each do |p|
   runner.bench *p
+end
+
+# Send the result to Slack if possible
+if ENV.key?("SLACK_API_TOKEN") && ENV.key?("SLACK_CHANNEL")
+  require "slack-ruby-client"
+
+  Slack.configure do |config|
+    config.token = ENV["SLACK_API_TOKEN"]
+  end
+  client = Slack::Web::Client.new
+  client.auth_test
+
+  title = Pathname.new(Logger.path).basename.to_s
+  spec = { version: version, num_gpus: num_gpus, superscalar: superscalar, cmux_memory: cmux_memory }
+  client.files_upload channels: ENV["SLACK_CHANNEL"],
+                      content: open(Logger.path).read,
+                      title: title,
+                      initial_comment: JSON.pretty_generate(spec)
 end
