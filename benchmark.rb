@@ -36,6 +36,7 @@ class Logger
 
     raise "hoge" if @@csv.nil?
     @@csv << data
+    @@csv.flush
   end
 end
 
