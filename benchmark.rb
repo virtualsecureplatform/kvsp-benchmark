@@ -90,7 +90,7 @@ class KVSPRunner
 
   def get_elf_text_size(path)
     readelf = run_command (@kvsp_path / "bin" / "llvm-readelf").to_s, ["-S", "_elf"]
-    line = readelf.lines.filter { |line| line.include?(" .text ") }[0]
+    line = readelf.lines.select { |line| line.include?(" .text ") }[0]
     raise "Invalid readelf result" if line.nil?
     size = line.split(/ +/)[7]
     raise "Invalid readelf result" if size.nil?
