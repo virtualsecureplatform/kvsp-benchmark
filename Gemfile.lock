@@ -7,6 +7,7 @@ GEM
       minitest (~> 5.1)
       tzinfo (~> 1.1)
       zeitwerk (~> 2.2)
+    citrus (3.0.2)
     concurrent-ruby (1.1.6)
     faraday (1.0.1)
       multipart-post (>= 1.2, < 3)
@@ -26,6 +27,8 @@ GEM
       hashie
       websocket-driver
     thread_safe (0.3.6)
+    toml-rb (2.0.1)
+      citrus (~> 3.0, > 3.0)
     tzinfo (1.2.7)
       thread_safe (~> 0.1)
     websocket-driver (0.7.1)
@@ -38,6 +41,7 @@ PLATFORMS
 
 DEPENDENCIES
   slack-ruby-client
+  toml-rb
 
 BUNDLED WITH
    2.1.4

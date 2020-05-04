@@ -7,7 +7,7 @@
 # $ SLACK_API_TOKEN="xxxxx" SLACK_CHANNEL="#channel" ./benchmark.sh [-g NGPUS]
 ###
 
-KVSP_VER=14
+KVSP_VER=15
 
 # Download kvsp if not exist
 if [ ! -f "kvsp_v$KVSP_VER/bin/kvsp" ]; then
@@ -19,6 +19,8 @@ if [ -z "${SLACK_API_TOKEN:-}" ]; then
     # Run
     ruby benchmark.rb --kvsp-ver $KVSP_VER --superscalar --cmux-memory "$@"
     ruby benchmark.rb --kvsp-ver $KVSP_VER --cmux-memory "$@"
+    ruby benchmark.rb --kvsp-ver $KVSP_VER "$@"
+    ruby benchmark.rb --kvsp-ver $KVSP_VER --superscalar "$@"
 else
     # Prepare Ruby gems
     bundle install || ( echo "Please install bundler. For example: 'gem install bundler'" && false )
@@ -26,6 +28,8 @@ else
     # Run
     bundle exec ruby benchmark.rb --kvsp-ver $KVSP_VER --superscalar --cmux-memory "$@"
     bundle exec ruby benchmark.rb --kvsp-ver $KVSP_VER --cmux-memory "$@"
+    bundle exec ruby benchmark.rb --kvsp-ver $KVSP_VER "$@"
+    bundle exec ruby benchmark.rb --kvsp-ver $KVSP_VER --superscalar "$@"
 fi
 
 # Cleanup

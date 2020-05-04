@@ -6,6 +6,7 @@ require "pathname"
 require "csv"
 require "optparse"
 require "json"
+require "toml-rb"
 
 def quote(str, prefix = "> ")
   prefix + str.gsub("\n", "\n#{prefix}")
@@ -41,14 +42,14 @@ class Logger
 end
 
 class KVSPRunner
-  def initialize(version:, superscalar:, num_gpus:)
+  def initialize(version:, superscalar:, cmux_memory:, num_gpus:)
     @kvsp_path = Pathname.new("kvsp_v#{version}")
     @cahp_proc = superscalar ? "emerald" : "diamond"
     @cahp_proc_llvm = superscalar ? "emerald" : "generic"
     @num_gpus = num_gpus
-    #@use_cmux_memory = use_cmux_memory
+    @cmux_memory = cmux_memory
 
-    @id_prefix = "v#{version}_#{@cahp_proc}_#{@num_gpus}gpu_"
+    @id_prefix = "v#{version}_#{@cahp_proc}_#{@num_gpus}gpu_#{@cmux_memory ? "wCM" : "woCM"}_"
   end
 
   def bench(c_path, cmd_options)
@@ -64,6 +65,21 @@ class KVSPRunner
     raise "cycle estimation failed" unless emu_res =~ /^#cycle\t([0-9]+)$/
     num_cycles = $1
     Logger.log [id, "num_cycles", num_cycles]
+
+    # Prepare blueprint
+    blueprint_path = @kvsp_path / "share/kvsp/cahp-#{@cahp_proc}.toml"
+    blueprint = TomlRB.load_file(blueprint_path.to_s)
+    blueprint["builtin"].each do |builtin|
+      case builtin["type"]
+      when "rom", "mux-rom"
+        builtin["type"] = @cmux_memory ? "rom" : "mux-rom"
+      when "ram", "mux-ram"
+        builtin["type"] = @cmux_memory ? "ram" : "mux-ram"
+      end
+    end
+    open(blueprint_path, "w") do |fh|
+      fh.write(TomlRB.dump(blueprint))
+    end
 
     # Run
     kvsp_run id, ["genkey", "-o", "_secret.key"]
@@ -108,7 +124,7 @@ opt = OptionParser.new
 opt.on("--kvsp-ver VERSION") { |v| version = v.to_i }
 opt.on("-g NGPUS") { |v| num_gpus = v.to_i }  # GPU
 opt.on("--superscalar") { |v| superscalar = v } # super-scalar
-opt.on("--cmux-memory") { |v| cmux_memory = v } # CMUX Memory # FIXME
+opt.on("--cmux-memory") { |v| cmux_memory = v } # CMUX Memory
 opt.parse!(ARGV)
 raise "Specify KVSP version with option --kvsp-ver" if version.nil?
 
@@ -116,7 +132,8 @@ raise "Specify KVSP version with option --kvsp-ver" if version.nil?
 Logger.open(Time.now.strftime "%Y%m%d_%H%M.log")
 runner = KVSPRunner.new(version: version,
                         superscalar: superscalar,
-                        num_gpus: num_gpus)
+                        num_gpus: num_gpus,
+                        cmux_memory: cmux_memory)
 program_and_data = [
   ["01_fib.c", ["5"]],
   ["02_hamming.c", ["10", "10", "10", "10", "de", "ad", "be", "ef"]],
