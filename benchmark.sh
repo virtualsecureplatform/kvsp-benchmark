@@ -15,22 +15,14 @@ if [ ! -f "kvsp_v$KVSP_VER/bin/kvsp" ]; then
     tar zx
 fi
 
-if [ -z "${SLACK_API_TOKEN:-}" ]; then
-    # Run
-    ruby benchmark.rb --kvsp-ver $KVSP_VER --superscalar --cmux-memory "$@"
-    ruby benchmark.rb --kvsp-ver $KVSP_VER --cmux-memory "$@"
-    ruby benchmark.rb --kvsp-ver $KVSP_VER "$@"
-    ruby benchmark.rb --kvsp-ver $KVSP_VER --superscalar "$@"
-else
-    # Prepare Ruby gems
-    bundle install || ( echo "Please install bundler. For example: 'gem install bundler'" && false )
+# Prepare Ruby gems
+bundle install || ( echo "Please install bundler. For example: 'gem install bundler'" && false )
 
-    # Run
-    bundle exec ruby benchmark.rb --kvsp-ver $KVSP_VER --superscalar --cmux-memory "$@"
-    bundle exec ruby benchmark.rb --kvsp-ver $KVSP_VER --cmux-memory "$@"
-    bundle exec ruby benchmark.rb --kvsp-ver $KVSP_VER "$@"
-    bundle exec ruby benchmark.rb --kvsp-ver $KVSP_VER --superscalar "$@"
-fi
+# Run
+bundle exec ruby benchmark.rb --kvsp-ver $KVSP_VER --superscalar --cmux-memory "$@"
+bundle exec ruby benchmark.rb --kvsp-ver $KVSP_VER --cmux-memory "$@"
+bundle exec ruby benchmark.rb --kvsp-ver $KVSP_VER "$@"
+bundle exec ruby benchmark.rb --kvsp-ver $KVSP_VER --superscalar "$@"
 
 # Cleanup
 rm _*
