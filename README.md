@@ -55,6 +55,10 @@ Sakura Koukaryoku w/ V100x1 & Y & Y & Brainf*ck & 1982 & 8077.28 & 4.08 \\
 Ubuntu
 
 ```
+cd kvsp-benchmark
 sudo apt update
-sudo apt install ruby libgoogle-perftools-dev libomp-dev
+sudo apt install ruby libgoogle-perftools-dev libomp-dev buiild-essentail
+sudo gem install bundler
+sudo gem install websocket-driver -v '0.7.1' --source 'https://rubygems.org/'
+bundle install
 ```
