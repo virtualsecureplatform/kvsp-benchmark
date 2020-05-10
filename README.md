@@ -58,9 +58,10 @@ There is Slackbot support
 Ubuntu
 
 ```
+git clone https://github.com/virtualsecureplatform/kvsp-benchmark.git
 cd kvsp-benchmark
 sudo apt update
-sudo apt install ruby libgoogle-perftools-dev libomp-dev build-essentail
+sudo apt install -y ruby ruby-dev libgoogle-perftools-dev libomp-dev build-essential
 sudo gem install bundler
 sudo gem install websocket-driver -v '0.7.1' --source 'https://rubygems.org/'
 bundle install
