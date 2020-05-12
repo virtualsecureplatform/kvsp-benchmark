@@ -1,0 +1,3 @@
+[submodule "faststat"]
+	path = faststat
+	url = https://github.com/ushitora-anqou/faststat.git
