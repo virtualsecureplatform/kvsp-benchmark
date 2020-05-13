@@ -1,15 +1,9 @@
 # kvsp-benchmark
 
-CPU mode
+## Benchmark for speed
 
 ```
-./benchmark.sh
-```
-
-GPU mode
-
-```
-./benchmark.sh -g number-of-GPUs-you-have
+$ ./benchmark.sh speed [-g NUM-OF-GPUS]
 ```
 
 Turn results into TeX format.
@@ -49,8 +43,21 @@ Sakura Koukaryoku w/ V100x1 & Y & Y & Hamming & 832 & 3397.68 & 4.08 \\
 Sakura Koukaryoku w/ V100x1 & Y & Y & Brainf*ck & 1982 & 8077.28 & 4.08 \\
 ```
 
+## Benchmark for bottleneck (CPU and GPU usage)
 
-# Dependency
+```
+$ ./benchmark.sh bottleneck [-g NUM-OF-GPUS]
+```
+
+Turn results into graph.
+
+```
+$ git submodule update --init --recursive
+$ bundle install
+$ bundle exec ruby bottleneck2graph.rb -f 7 -t 10 faststat.log kvsp.log # -f and -t option can be omitted.
+```
+
+## Dependency
 
 There is Slackbot support
 
