@@ -52,7 +52,7 @@ case "$1" in
 
         # Run faststat
         faststat_logfile=$(date +'bottleneck-%Y%m%d%H%M%S-faststat.log')
-        faststat/build/faststat > $faststat_logfile &
+        faststat/build/faststat -t 0.1 > $faststat_logfile &
 
         # Run kvsp
         kvsp_logfile=$(date +'bottleneck-%Y%m%d%H%M%S-kvsp.log')
