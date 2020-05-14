@@ -36,7 +36,7 @@ cpu_stat = faststat_log.map { |row|
     100 - row[4],  # total - idle
   ]
 }.transpose
-gpu_stat = faststat_log.map { |row| [row[0] - epoch_time, row[10]] }.transpose
+gpu_stat = faststat_log.map { |row| [row[0] - epoch_time, row[11]] }.transpose
 
 Gnuplot.open do |gp|
   Gnuplot::Plot.new(gp) do |plot|
