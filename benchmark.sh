@@ -1,11 +1,20 @@
 #!/bin/bash -eu
 
 ### Usage
-# $ ./benchmark.sh [-g NGPUS]
+# $ ./benchmark.sh speed [-g NGPUS]
+# $ ./benchmark.sh bottleneck [-g NGPUS]
 #
 # If you want to send results to Slack,
 # $ SLACK_API_TOKEN="xxxxx" SLACK_CHANNEL="#channel" ./benchmark.sh [-g NGPUS]
 ###
+
+print_usage_and_exit() {
+    echo "Usage: $0 speed [-g NGPUS]"
+    echo "       $0 bottleneck [-g NGPUS]"
+    exit 1
+}
+
+[ $# -lt 1 ] && print_usage_and_exit
 
 KVSP_VER=17
 
@@ -60,7 +69,6 @@ case "$1" in
         ;;
 
     * )
-        echo "Usage: benchmark.sh [speed|bottleneck]"
-        exit 1
+        print_usage_and_exit
         ;;
 esac
