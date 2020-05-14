@@ -30,7 +30,12 @@ end_time = kvsp_log[params[:t]][0]
 faststat_log = faststat_log.select { |row| start_time <= row[0] and row[0] <= end_time }
 kvsp_log = kvsp_log.select { |row| start_time <= row[0] and row[0] <= end_time }
 
-cpu_stat = faststat_log.map { |row| [row[0] - epoch_time, row[1] + row[3]] }.transpose
+cpu_stat = faststat_log.map { |row|
+  [
+    row[0] - epoch_time,
+    100 - row[4],  # total - idle
+  ]
+}.transpose
 gpu_stat = faststat_log.map { |row| [row[0] - epoch_time, row[10]] }.transpose
 
 Gnuplot.open do |gp|
