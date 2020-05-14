@@ -131,6 +131,17 @@ def yn(b)
 end
 
 def log2csv(machine_name, filepaths)
+  # Normalize data
+  #  [
+  #    {
+  #      kvsp_version: positive number,
+  #      gpus: zero or positive number,
+  #      program: "01_fib" | "02_hamming" | "03_bf",
+  #      processor: :diamond | :emerald,
+  #      cmuxmem: boolean,
+  #    }
+  #  ]
+  #
   normalized_data = []
   filepaths.each do |filepath|
     CSV.foreach(filepath) do |row|
@@ -168,6 +179,17 @@ def log2csv(machine_name, filepaths)
     end
   end
 
+  # Non-trivial selection of data.
+  # 1. Since v16 and above has optimized mux-ram, <=v15 are meaningless.
+  normalized_data.select! do |row|
+    # 1. Remove <=v15 if it does not use CMUX Memory.
+    next false if row[:kvsp_version] <= 15 and not row[:cmuxmem]
+
+    # All tests passed.
+    true
+  end
+
+  # Make table from data
   table = {}
   normalized_data.each do |row|
     key = row.slice(:gpus, :processor, :cmuxmem, :program)
