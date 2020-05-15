@@ -14,6 +14,7 @@ GEM
     faraday_middleware (1.0.0)
       faraday (~> 1.0)
     gli (2.19.0)
+    gnuplot (2.6.2)
     hashie (4.1.0)
     i18n (1.8.2)
       concurrent-ruby (~> 1.0)
@@ -40,6 +41,7 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
+  gnuplot
   slack-ruby-client
   toml-rb
 
