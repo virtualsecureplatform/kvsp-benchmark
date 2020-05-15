@@ -59,6 +59,9 @@ case "$1" in
         kvsp_v$KVSP_VER/bin/kvsp genkey -o _sk
         kvsp_v$KVSP_VER/bin/kvsp enc -k _sk -i _elf -o _req.packet
 
+        # Prepare KVSP's blueprint. Turn CMUX Memory on.
+        bundle exec ruby change_blueprint.rb --cmux-memory "kvsp_v$KVSP_VER/share/kvsp/cahp-emerald.toml"
+
         # Run faststat
         faststat_logfile=$(date +'bottleneck-%Y%m%d%H%M%S-faststat.log')
         faststat/build/faststat -t 0.1 > $faststat_logfile &

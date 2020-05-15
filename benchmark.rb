@@ -8,6 +8,8 @@ require "optparse"
 require "json"
 require "toml-rb"
 
+require "./change_blueprint"
+
 def quote(str, prefix = "> ")
   prefix + str.gsub("\n", "\n#{prefix}")
 end
@@ -68,18 +70,7 @@ class KVSPRunner
 
     # Prepare blueprint
     blueprint_path = @kvsp_path / "share/kvsp/cahp-#{@cahp_proc}.toml"
-    blueprint = TomlRB.load_file(blueprint_path.to_s)
-    blueprint["builtin"].each do |builtin|
-      case builtin["type"]
-      when "rom", "mux-rom"
-        builtin["type"] = @cmux_memory ? "rom" : "mux-rom"
-      when "ram", "mux-ram"
-        builtin["type"] = @cmux_memory ? "ram" : "mux-ram"
-      end
-    end
-    open(blueprint_path, "w") do |fh|
-      fh.write(TomlRB.dump(blueprint))
-    end
+    change_blueprint blueprint_path, @cmux_memory
 
     # Run
     kvsp_run id, ["genkey", "-o", "_secret.key"]
