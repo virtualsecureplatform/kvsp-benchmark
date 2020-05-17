@@ -210,6 +210,25 @@ def log2csv(machine_name, filepaths)
     end
   end
 
+  # Sort table
+  table = table.sort do |l, r|
+    # :gpus
+    next 1 if l[0][:gpus] > r[0][:gpus]
+    next -1 if l[0][:gpus] < r[0][:gpus]
+
+    # :processor
+    tbl = { diamond: 0, emerald: 1 }
+    next 1 if tbl[l[0][:processor]] > tbl[r[0][:processor]]
+    next -1 if tbl[l[0][:processor]] < tbl[r[0][:processor]]
+
+    # :cmuxmem
+    tbl = { false => 0, true => 1 }
+    next 1 if tbl[l[0][:cmuxmem]] > tbl[r[0][:cmuxmem]]
+    next -1 if tbl[l[0][:cmuxmem]] < tbl[r[0][:cmuxmem]]
+
+    l[0][:program] <=> r[0][:program]
+  end.to_h
+
   sio = StringIO.new
   table.each do |key, value|
     machine = if key[:gpus] == 0
@@ -230,8 +249,8 @@ def log2csv(machine_name, filepaths)
         raise "Invalid program"
       end
     num_cycles = value[:num_cycles]
-    runtime = value[:runtime].mean.round(2)
-    sec_per_cycle = (value[:runtime].mean / value[:num_cycles]).round(2)
+    runtime = sprintf("%.02f", value[:runtime].mean)
+    sec_per_cycle = sprintf("%.02f", value[:runtime].mean / value[:num_cycles])
 
     sio.print [
                 machine,
