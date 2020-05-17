@@ -57,6 +57,7 @@ case "$1" in
         # Prepare request packet
         kvsp_v$KVSP_VER/bin/kvsp cc 03_bf.c -o _elf
         kvsp_v$KVSP_VER/bin/kvsp genkey -o _sk
+        kvsp_v$KVSP_VER/bin/kvsp genbkey -i _sk -o _bk
         kvsp_v$KVSP_VER/bin/kvsp enc -k _sk -i _elf -o _req.packet
 
         # Prepare KVSP's blueprint. Turn CMUX Memory on.
@@ -68,7 +69,7 @@ case "$1" in
 
         # Run kvsp
         kvsp_logfile=$(date +'bottleneck-%Y%m%d%H%M%S-kvsp.log')
-        kvsp_v$KVSP_VER/bin/kvsp run -c 20 -i _req.packet -o _res.packet -iyokan-args "--stdout-csv" "$@" | tee $kvsp_logfile
+        kvsp_v$KVSP_VER/bin/kvsp run -c 20 -bkey _bk -i _req.packet -o _res.packet -iyokan-args "--stdout-csv" "$@" > $kvsp_logfile
         ;;
 
     * )

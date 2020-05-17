@@ -74,8 +74,9 @@ class KVSPRunner
 
     # Run
     kvsp_run id, ["genkey", "-o", "_secret.key"]
+    kvsp_run id, ["genbkey", "-i", "_secret.key", "-o", "_bootstrapping.key"]
     kvsp_run id, ["enc", "-k", "_secret.key", "-i", "_elf", "-o", "_req.packet"], cmd_options
-    kvsp_run id, ["run", "-i", "_req.packet", "-o", "_res.packet", "-c", num_cycles, "-g", @num_gpus, "--cahp-cpu", @cahp_proc]
+    kvsp_run id, ["run", "-bkey", "_bootstrapping.key", "-i", "_req.packet", "-o", "_res.packet", "-c", num_cycles, "-g", @num_gpus, "--cahp-cpu", @cahp_proc]
     kvsp_run id, ["dec", "-k", "_secret.key", "-i", "_res.packet"]
 
     ctxt_size = run_command "du", ["-b", "_req.packet"]
