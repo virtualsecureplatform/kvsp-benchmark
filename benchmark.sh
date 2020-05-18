@@ -70,6 +70,8 @@ case "$1" in
         # Run kvsp
         kvsp_logfile=$(date +'bottleneck-%Y%m%d%H%M%S-kvsp.log')
         kvsp_v$KVSP_VER/bin/kvsp run -c 20 -bkey _bk -i _req.packet -o _res.packet -iyokan-args "--stdout-csv" "$@" > $kvsp_logfile
+
+        echo "Results in '$faststat_logfile' and '$kvsp_logfile'"
         ;;
 
     * )
