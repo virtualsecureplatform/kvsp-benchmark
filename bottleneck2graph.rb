@@ -13,8 +13,8 @@ unless ARGV.size == 2
   raise "Usage: ruby bottleneck2graph.rb [-f START-CLOCK] [-t END-CLOCK] FASTSTAT-LOG-FILE KVSP-LOG-FILE"
 end
 
-faststat_log = CSV.read(ARGV[0])[1..].map { |row|
-  [Time.strptime(row[0], "%Y-%m-%d %H:%M:%S.%L")] + row[1..].map(&:to_f)
+faststat_log = CSV.read(ARGV[0])[1..-1].map { |row|
+  [Time.strptime(row[0], "%Y-%m-%d %H:%M:%S.%L")] + row[1..-1].map(&:to_f)
 }
 kvsp_log = CSV.read(ARGV[1]).map { |row|
   [Time.strptime(row[0], "%Y-%m-%d %H:%M:%S.%L"), row[1], row[2].to_i]
