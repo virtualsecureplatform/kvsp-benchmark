@@ -45,7 +45,7 @@ case "$1" in
         shift
 
         # Check if faststat is built
-        if [ ! -f faststat/build/faststat ]; then
+        if [ ! -x faststat/build/faststat ]; then
             echo "Build faststat in advance"
             exit 1
         fi
