@@ -16,7 +16,7 @@ print_usage_and_exit() {
 
 [ $# -lt 1 ] && print_usage_and_exit
 
-KVSP_VER=18
+KVSP_VER=19
 
 # Download kvsp if not exist
 if [ ! -f "kvsp_v$KVSP_VER/bin/kvsp" ]; then
@@ -69,7 +69,7 @@ case "$1" in
 
         # Run kvsp
         kvsp_logfile=$(date +'bottleneck-%Y%m%d%H%M%S-kvsp.log')
-        kvsp_v$KVSP_VER/bin/kvsp run -c 20 -bkey _bk -i _req.packet -o _res.packet -iyokan-args "--stdout-csv" "$@" > $kvsp_logfile
+        kvsp_v$KVSP_VER/bin/kvsp run -quiet -c 1 -bkey _bk -i _req.packet -o _res.packet -iyokan-args "--stdout-csv" "$@" | tee $kvsp_logfile
 
         echo "Results in '$faststat_logfile' and '$kvsp_logfile'"
         ;;
