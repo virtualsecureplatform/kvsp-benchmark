@@ -16,7 +16,7 @@ print_usage_and_exit() {
 
 [ $# -lt 1 ] && print_usage_and_exit
 
-KVSP_VER=19
+KVSP_VER=20
 
 # Download kvsp if not exist
 if [ ! -f "kvsp_v$KVSP_VER/bin/kvsp" ]; then
