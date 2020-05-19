@@ -181,9 +181,12 @@ def log2csv(machine_name, filepaths)
 
   # Non-trivial selection of data.
   # 1. Since v16 and above has optimized mux-ram, <=v15 are meaningless.
+  # 2. Since v20 and above has optimized CMUX Memory RAM, <=v19 are meaningless.
   normalized_data.select! do |row|
     # 1. Remove <=v15 if it does not use CMUX Memory.
     next false if row[:kvsp_version] <= 15 and not row[:cmuxmem]
+    # 2. Remove <=v19 if it uses CMUX Memory.
+    next false if row[:kvsp_version] <= 19 and row[:cmuxmem]
 
     # All tests passed.
     true
@@ -270,5 +273,6 @@ end
 puts "% machine & w/ super-scalar & w/ CMUX Memory & program & \# of cycles & runtime & sec./cycle\\\\"
 Dir.each_child(ARGV[0]) do |machine_name|
   filepaths = Dir.glob("#{ARGV[0]}/#{machine_name}/*.log")
-  puts log2csv(machine_name, filepaths)
+  s = log2csv(machine_name, filepaths)
+  puts s unless s.empty?
 end
