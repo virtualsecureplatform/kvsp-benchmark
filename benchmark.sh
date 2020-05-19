@@ -63,14 +63,18 @@ case "$1" in
         # Prepare KVSP's blueprint. Turn CMUX Memory on.
         bundle exec ruby change_blueprint.rb --cmux-memory "kvsp_v$KVSP_VER/share/kvsp/cahp-emerald.toml"
 
+        # Make directory for results
+        results_dir=$(date +'bottleneck-%Y%m%d%H%M%S')
+        mkdir $results_dir
+
         # Run faststat
-        faststat_logfile=$(date +'bottleneck-%Y%m%d%H%M%S-faststat.log')
+        faststat_logfile="$results_dir/faststat.log"
         faststat/build/faststat -t 0.1 > $faststat_logfile &
 
         # Run kvsp
-        kvsp_logfile=$(date +'bottleneck-%Y%m%d%H%M%S-kvsp.log')
-        kvsp_time_logfile=$(date +'bottleneck-%Y%m%d%H%M%S-kvsp-time')
-        kvsp_v$KVSP_VER/bin/kvsp run -quiet -c 20 -bkey _bk -i _req.packet -o _res.packet \
+        kvsp_logfile="$results_dir/kvsp.log"
+        kvsp_time_logfile="$results_dir/kvsp-time"
+        kvsp_v$KVSP_VER/bin/kvsp run -quiet -c 20 -bkey _bk -i _req.packet -o _res.packet -snapshot _snapshot \
             -iyokan-args "--stdout-csv" -iyokan-args "--dump-time-csv-prefix=$kvsp_time_logfile" "$@" | tee $kvsp_logfile
 
         echo "Results in '$faststat_logfile' and '$kvsp_logfile'"
