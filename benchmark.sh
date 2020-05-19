@@ -10,7 +10,7 @@
 
 print_usage_and_exit() {
     echo "Usage: $0 speed [-g NGPUS]"
-    echo "       $0 bottleneck [-g NGPUS]"
+    echo "       $0 bottleneck [emerald|diamond] [-g NGPUS]"
     exit 1
 }
 
@@ -44,6 +44,16 @@ case "$1" in
     bottleneck )
         shift
 
+        processor=emerald
+        if [ "$1" = "diamond" ]; then
+            processor=diamond
+            shift
+        elif [ "$1" = "emerald" ]; then
+            processor=emerald
+            shift
+        fi
+        echo "Using processor: $processor"
+
         # Check if faststat is built
         if [ ! -x faststat/build/faststat ]; then
             echo "Build faststat in advance"
@@ -61,7 +71,7 @@ case "$1" in
         kvsp_v$KVSP_VER/bin/kvsp enc -k _sk -i _elf -o _req.packet
 
         # Prepare KVSP's blueprint. Turn CMUX Memory on.
-        bundle exec ruby change_blueprint.rb --cmux-memory "kvsp_v$KVSP_VER/share/kvsp/cahp-emerald.toml"
+        bundle exec ruby change_blueprint.rb --cmux-memory "kvsp_v$KVSP_VER/share/kvsp/cahp-$processor.toml"
 
         # Make directory for results
         results_dir=$(date +'bottleneck-%Y%m%d%H%M%S')
@@ -74,7 +84,8 @@ case "$1" in
         # Run kvsp
         kvsp_logfile="$results_dir/kvsp.log"
         kvsp_time_logfile="$results_dir/kvsp-time"
-        kvsp_v$KVSP_VER/bin/kvsp run -quiet -c 20 -bkey _bk -i _req.packet -o _res.packet -snapshot _snapshot \
+        kvsp_v$KVSP_VER/bin/kvsp run -quiet -c 20 -bkey _bk -i _req.packet -o _res.packet \
+            -snapshot _snapshot -cahp-cpu $processor \
             -iyokan-args "--stdout-csv" -iyokan-args "--dump-time-csv-prefix=$kvsp_time_logfile" "$@" | tee $kvsp_logfile
 
         echo "Results in '$faststat_logfile' and '$kvsp_logfile'"
