@@ -17,7 +17,7 @@ faststat_log = CSV.read(ARGV[0])[1..-1].map { |row|
   [Time.strptime(row[0], "%Y-%m-%d %H:%M:%S.%L")] + row[1..-1].map(&:to_f)
 }
 kvsp_log = CSV.read(ARGV[1]).map { |row|
-  [Time.strptime(row[0], "%Y-%m-%d %H:%M:%S.%L"), row[1], row[2].to_i]
+  [Time.strptime(row[0], "%Y-%m-%d %H:%M:%S.%L"), row[1]]
 }.select { |row| row[1] == "start" }
 
 unless faststat_log.size > 0 and kvsp_log.size > 0
