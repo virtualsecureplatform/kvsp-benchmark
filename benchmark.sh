@@ -16,7 +16,7 @@ print_usage_and_exit() {
 
 [ $# -lt 1 ] && print_usage_and_exit
 
-KVSP_VER=21
+KVSP_VER=22
 
 # Download kvsp if not exist
 if [ ! -f "kvsp_v$KVSP_VER/bin/kvsp" ]; then
@@ -32,10 +32,14 @@ case "$1" in
         bundle install || ( echo "Please install bundler. For example: 'gem install bundler'" && false )
 
         # Run
-        bundle exec ruby benchmark.rb --kvsp-ver $KVSP_VER --superscalar --cmux-memory "$@"
-        bundle exec ruby benchmark.rb --kvsp-ver $KVSP_VER --cmux-memory "$@"
-        bundle exec ruby benchmark.rb --kvsp-ver $KVSP_VER "$@"
-        bundle exec ruby benchmark.rb --kvsp-ver $KVSP_VER --superscalar "$@"
+        ## Until v21
+        #bundle exec ruby benchmark.rb --kvsp-ver $KVSP_VER --superscalar --cmux-memory "$@"
+        #bundle exec ruby benchmark.rb --kvsp-ver $KVSP_VER --cmux-memory "$@"
+        #bundle exec ruby benchmark.rb --kvsp-ver $KVSP_VER "$@"
+        #bundle exec ruby benchmark.rb --kvsp-ver $KVSP_VER --superscalar "$@"
+        ## Since v22
+        bundle exec ruby benchmark.rb --kvsp-ver $KVSP_VER --ruby --cmux-memory "$@"
+        bundle exec ruby benchmark.rb --kvsp-ver $KVSP_VER --ruby "$@"
 
         # Cleanup
         rm _*
@@ -44,14 +48,21 @@ case "$1" in
     bottleneck )
         shift
 
-        processor=emerald
-        if [ "$1" = "diamond" ]; then
-            processor=diamond
-            shift
-        elif [ "$1" = "emerald" ]; then
-            processor=emerald
-            shift
-        fi
+        processor=ruby
+        case "$1" in
+            diamond )
+                processor=diamond
+                shift
+                ;;
+            emerald)
+                processor=emerald
+                shift
+                ;;
+            ruby)
+                processor=ruby
+                shift
+                ;;
+        esac
         echo "Using processor: $processor"
 
         # Check if faststat is built
@@ -68,7 +79,7 @@ case "$1" in
         kvsp_v$KVSP_VER/bin/kvsp cc 03_bf.c -o _elf
         kvsp_v$KVSP_VER/bin/kvsp genkey -o _sk
         kvsp_v$KVSP_VER/bin/kvsp genbkey -i _sk -o _bk
-        kvsp_v$KVSP_VER/bin/kvsp enc -k _sk -i _elf -o _req.packet
+        kvsp_v$KVSP_VER/bin/kvsp enc -k _sk -i _elf -o _req.packet -cahp-cpu $processor
 
         # Prepare KVSP's blueprint. Turn CMUX Memory on.
         bundle exec ruby change_blueprint.rb --cmux-memory "kvsp_v$KVSP_VER/share/kvsp/cahp-$processor.toml"

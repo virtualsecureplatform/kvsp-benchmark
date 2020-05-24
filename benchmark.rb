@@ -44,10 +44,9 @@ class Logger
 end
 
 class KVSPRunner
-  def initialize(version:, superscalar:, cmux_memory:, num_gpus:)
+  def initialize(version:, cahp_proc:, cmux_memory:, num_gpus:)
     @kvsp_path = Pathname.new("kvsp_v#{version}")
-    @cahp_proc = superscalar ? "emerald" : "diamond"
-    @cahp_proc_llvm = superscalar ? "emerald" : "generic"
+    @cahp_proc = cahp_proc
     @num_gpus = num_gpus
     @cmux_memory = cmux_memory
 
@@ -75,7 +74,7 @@ class KVSPRunner
     # Run
     kvsp_run id, ["genkey", "-o", "_secret.key"]
     kvsp_run id, ["genbkey", "-i", "_secret.key", "-o", "_bootstrapping.key"]
-    kvsp_run id, ["enc", "-k", "_secret.key", "-i", "_elf", "-o", "_req.packet"], cmd_options
+    kvsp_run id, ["enc", "-k", "_secret.key", "-i", "_elf", "-o", "_req.packet", "-cahp-cpu", @cahp_proc], cmd_options
     kvsp_run id, ["run", "-bkey", "_bootstrapping.key", "-i", "_req.packet", "-o", "_res.packet", "-c", num_cycles, "-g", @num_gpus, "--cahp-cpu", @cahp_proc]
     kvsp_run id, ["dec", "-k", "_secret.key", "-i", "_res.packet"]
 
@@ -110,12 +109,13 @@ end
 # Default is all off
 version = nil
 num_gpus = 0
-superscalar = false
+cahp_proc = nil # FIXME: should be a single-cycle processor
 cmux_memory = false
 opt = OptionParser.new
 opt.on("--kvsp-ver VERSION") { |v| version = v.to_i }
 opt.on("-g NGPUS") { |v| num_gpus = v.to_i }  # GPU
-opt.on("--superscalar") { |v| superscalar = v } # super-scalar
+opt.on("--ruby") { |v| cahp_proc = "ruby" }
+opt.on("--emerald") { |v| cahp_proc = "emerald" }
 opt.on("--cmux-memory") { |v| cmux_memory = v } # CMUX Memory
 opt.parse!(ARGV)
 raise "Specify KVSP version with option --kvsp-ver" if version.nil?
@@ -123,7 +123,7 @@ raise "Specify KVSP version with option --kvsp-ver" if version.nil?
 # Prepare
 Logger.open(Time.now.strftime "%Y%m%d_%H%M.log")
 runner = KVSPRunner.new(version: version,
-                        superscalar: superscalar,
+                        cahp_proc: cahp_proc,
                         num_gpus: num_gpus,
                         cmux_memory: cmux_memory)
 program_and_data = [
@@ -148,7 +148,7 @@ if ENV.key?("SLACK_API_TOKEN") && ENV.key?("SLACK_CHANNEL")
   client.auth_test
 
   title = Pathname.new(Logger.path).basename.to_s
-  spec = { version: version, num_gpus: num_gpus, superscalar: superscalar, cmux_memory: cmux_memory }
+  spec = { version: version, num_gpus: num_gpus, cahp_proc: cahp_proc, cmux_memory: cmux_memory }
   client.files_upload channels: ENV["SLACK_CHANNEL"],
                       content: open(Logger.path).read,
                       title: title,
