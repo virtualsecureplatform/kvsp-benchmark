@@ -94,10 +94,10 @@ case "$1" in
 
         # Run kvsp
         kvsp_logfile="$results_dir/kvsp.log"
-        kvsp_time_logfile="$results_dir/kvsp-time"
+        #kvsp_time_logfile="$results_dir/kvsp-time"
         kvsp_v$KVSP_VER/bin/kvsp run -quiet -c 20 -bkey _bk -i _req.packet -o _res.packet \
             -snapshot _snapshot -cahp-cpu $processor \
-            -iyokan-args "--stdout-csv" -iyokan-args "--dump-time-csv-prefix=$kvsp_time_logfile" "$@" | tee $kvsp_logfile
+            -iyokan-args "--stdout-csv" "$@" | tee $kvsp_logfile
 
         echo "Results in '$faststat_logfile' and '$kvsp_logfile'"
         ;;
