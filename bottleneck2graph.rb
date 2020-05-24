@@ -13,10 +13,12 @@ unless ARGV.size == 2
   raise "Usage: ruby bottleneck2graph.rb [-f START-CLOCK] [-t END-CLOCK] FASTSTAT-LOG-FILE KVSP-LOG-FILE"
 end
 
-faststat_log = CSV.read(ARGV[0])[1..-1].map { |row|
+faststat_log_file = ARGV[0]
+kvsp_log_file = ARGV[1]
+faststat_log = CSV.read(faststat_log_file)[1..-1].map { |row|
   [Time.strptime(row[0], "%Y-%m-%d %H:%M:%S.%L")] + row[1..-1].map(&:to_f)
 }
-kvsp_log = CSV.read(ARGV[1]).map { |row|
+kvsp_log = CSV.read(kvsp_log_file).map { |row|
   [Time.strptime(row[0], "%Y-%m-%d %H:%M:%S.%L"), row[1]]
 }.select { |row| row[1] == "start" }
 
@@ -40,7 +42,8 @@ gpu_stat = faststat_log.map { |row| [row[0] - epoch_time, row[11]] }.transpose
 
 Gnuplot.open do |gp|
   Gnuplot::Plot.new(gp) do |plot|
-    plot.ylabel "hoho"
+    plot.title "#{faststat_log_file}, #{kvsp_log_file}"
+    plot.ylabel "Usage"
     plot.xlabel "Time"
     plot.xrange "[#{start_time - epoch_time}:#{end_time - epoch_time}]"
     plot.set "size ratio 0.25"
