@@ -16,7 +16,7 @@ print_usage_and_exit() {
 
 [ $# -lt 1 ] && print_usage_and_exit
 
-KVSP_VER=22
+KVSP_VER=23
 
 # Download kvsp if not exist
 if [ ! -f "kvsp_v$KVSP_VER/bin/kvsp" ]; then
@@ -38,7 +38,9 @@ case "$1" in
         #bundle exec ruby benchmark.rb --kvsp-ver $KVSP_VER "$@"
         #bundle exec ruby benchmark.rb --kvsp-ver $KVSP_VER --superscalar "$@"
         ## Since v22
+        bundle exec ruby benchmark.rb --kvsp-ver $KVSP_VER --pearl --cmux-memory "$@"
         bundle exec ruby benchmark.rb --kvsp-ver $KVSP_VER --ruby --cmux-memory "$@"
+        bundle exec ruby benchmark.rb --kvsp-ver $KVSP_VER --pearl "$@"
         bundle exec ruby benchmark.rb --kvsp-ver $KVSP_VER --ruby "$@"
 
         # Cleanup
@@ -48,7 +50,7 @@ case "$1" in
     bottleneck )
         shift
 
-        processor=ruby
+        processor=pearl
         case "$1" in
             diamond )
                 processor=diamond
@@ -60,6 +62,10 @@ case "$1" in
                 ;;
             ruby)
                 processor=ruby
+                shift
+                ;;
+            pearl)
+                processor=pearl
                 shift
                 ;;
         esac

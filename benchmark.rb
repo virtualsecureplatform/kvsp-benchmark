@@ -109,11 +109,12 @@ end
 # Default is all off
 version = nil
 num_gpus = 0
-cahp_proc = nil # FIXME: should be a single-cycle processor
+cahp_proc = "pearl"
 cmux_memory = false
 opt = OptionParser.new
 opt.on("--kvsp-ver VERSION") { |v| version = v.to_i }
 opt.on("-g NGPUS") { |v| num_gpus = v.to_i }  # GPU
+opt.on("--pearl") { |v| cahp_proc = "pearl" }
 opt.on("--ruby") { |v| cahp_proc = "ruby" }
 opt.on("--emerald") { |v| cahp_proc = "emerald" }
 opt.on("--cmux-memory") { |v| cmux_memory = v } # CMUX Memory
