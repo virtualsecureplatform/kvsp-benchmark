@@ -94,16 +94,29 @@ case "$1" in
         results_dir=$(date +'bottleneck-%Y%m%d%H%M%S')
         mkdir $results_dir
 
+        # Log useful information about run
+        cat /proc/cpuinfo > "$results_dir/cpuinfo"
+        cat /proc/meminfo > "$results_dir/meminfo"
+        echo -e "KVSP_VER\t$KVSP_VER" >> "$results_dir/kvspinfo"
+        echo -e "processor\t$processor" >> "$results_dir/kvspinfo"
+
         # Run faststat
         faststat_logfile="$results_dir/faststat.log"
         faststat/build/faststat -t 0.1 > $faststat_logfile &
 
         # Run kvsp
         kvsp_logfile="$results_dir/kvsp.log"
-        #kvsp_time_logfile="$results_dir/kvsp-time"
+        kvsp_logfile2="$results_dir/kvsp-for-dump.log"
+        kvsp_time_logfile="$results_dir/kvsp-time"
+        kvsp_graph_logfile="$results_dir/kvsp-graph"
         kvsp_v$KVSP_VER/bin/kvsp run -quiet -c 20 -bkey _bk -i _req.packet -o _res.packet \
             -snapshot _snapshot -cahp-cpu $processor \
             -iyokan-args "--stdout-csv" "$@" | tee $kvsp_logfile
+        kvsp_v$KVSP_VER/bin/kvsp run -quiet -c 20 -bkey _bk -i _req.packet -o _res.packet \
+            -snapshot _snapshot -cahp-cpu $processor \
+            -iyokan-args "--stdout-csv" \
+            -iyokan-args "--dump-time-csv-prefix=$kvsp_time_logfile" \
+            "$@" | tee $kvsp_logfile2
 
         echo "Results in '$faststat_logfile' and '$kvsp_logfile'"
         ;;
