@@ -94,10 +94,7 @@ case "$1" in
         mkdir $results_dir
 
         # Log useful information about run
-        cat /proc/cpuinfo > "$results_dir/cpuinfo"
-        cat /proc/meminfo > "$results_dir/meminfo"
-        echo -e "KVSP_VER\t$KVSP_VER" >> "$results_dir/kvspinfo"
-        echo -e "processor\t$processor" >> "$results_dir/kvspinfo"
+        sudo ./getlinuxinfo.sh "$results_dir"
 
         # Run faststat
         faststat_logfile="$results_dir/faststat.log"
