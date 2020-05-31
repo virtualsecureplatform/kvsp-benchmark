@@ -18,10 +18,15 @@ print_usage_and_exit() {
 
 KVSP_VER=24
 
-# Download kvsp if not exist
+# Download kvsp if not exists
 if [ ! -f "kvsp_v$KVSP_VER/bin/kvsp" ]; then
     curl -L https://github.com/virtualsecureplatform/kvsp/releases/download/v$KVSP_VER/kvsp.tar.gz | \
     tar zx
+fi
+# Download faststat if not exists
+if [ ! -f faststat ]; then
+    curl -o faststat -L https://github.com/ushitora-anqou/faststat/releases/download/v0.0.1/faststat
+    chmod +x faststat
 fi
 
 case "$1" in
@@ -71,12 +76,6 @@ case "$1" in
         esac
         echo "Using processor: $processor"
 
-        # Check if faststat is built
-        if [ ! -x faststat/build/faststat ]; then
-            echo "Build faststat in advance"
-            exit 1
-        fi
-
         # Kill all children at exit
         # Thanks to: https://stackoverflow.com/a/2173421
         trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM EXIT
@@ -102,7 +101,7 @@ case "$1" in
 
         # Run faststat
         faststat_logfile="$results_dir/faststat.log"
-        faststat/build/faststat -t 0.1 > $faststat_logfile &
+        ./faststat -t 0.1 > $faststat_logfile &
 
         # Run kvsp
         kvsp_logfile="$results_dir/kvsp.log"
