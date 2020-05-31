@@ -162,7 +162,7 @@ def log2csv(machine_name, filepaths)
             processor: :emerald,
             cmuxmem: true,
           }
-        when /^v([0-9]+)_(emerald|diamond|ruby)_([0-9]+)gpus?(?:_(wCM|woCM))?_([0-9]+_[a-z]+)$/
+        when /^v([0-9]+)_(emerald|diamond|ruby|pearl)_([0-9]+)gpus?(?:_(wCM|woCM))?_([0-9]+_[a-z]+)$/
           {
             kvsp_version: $1.to_i,
             gpus: $3.to_i,
@@ -180,16 +180,13 @@ def log2csv(machine_name, filepaths)
   end
 
   # Non-trivial selection of data.
-  # 1. Since v16 and above has optimized mux-ram, <=v15 are meaningless.
-  # 2. Since v20 and above has optimized CMUX Memory RAM, <=v19 are meaningless.
-  # 3. cahp-diamond and cahp-emerald are old processors and no longer have no meaning.
+  # 1. <=v23 have different architectures, so doesn't matter.
+  # 2. only cahp-pearl and cahp-ruby does matter.
   normalized_data.select! do |row|
-    # 1. Remove <=v15 if it does not use CMUX Memory.
-    next false if row[:kvsp_version] <= 15 and not row[:cmuxmem]
-    # 2. Remove <=v19 if it uses CMUX Memory.
-    next false if row[:kvsp_version] <= 19 and row[:cmuxmem]
-    # 3. Ignore diamond and emerald.
-    next false if [:diamond, :emerald].include? row[:processor]
+    # 1. <=v23 have different architectures, so doesn't matter.
+    next false if row[:kvsp_version] <= 23
+    # 2. only cahp-pearl and cahp-ruby does matter.
+    next false unless [:pearl, :ruby].include? row[:processor]
 
     # All tests passed.
     true
@@ -223,7 +220,7 @@ def log2csv(machine_name, filepaths)
     next -1 if l[0][:gpus] < r[0][:gpus]
 
     # :processor
-    tbl = { diamond: 0, emerald: 1, ruby: 2 }
+    tbl = { diamond: 0, emerald: 1, ruby: 3, pearl: 2 }
     next 1 if tbl[l[0][:processor]] > tbl[r[0][:processor]]
     next -1 if tbl[l[0][:processor]] < tbl[r[0][:processor]]
 
@@ -267,13 +264,14 @@ def log2csv(machine_name, filepaths)
                 runtime,
                 sec_per_cycle,
               ].join(" & ")
-    sio.puts " \\\\"
+    sio.print " \\\\"
+    sio.puts "%\t#{value[:runtime].size}"
   end
 
   sio.string
 end
 
-puts "% machine & w/ pipeline & w/ CMUX Memory & program & \# of cycles & runtime & sec./cycle\\\\"
+puts "% machine & pipeline? & CMUX Memory? & program & \# of cycles & runtime & sec./cycle\\\\"
 Dir.each_child(ARGV[0]) do |machine_name|
   filepaths = Dir.glob("#{ARGV[0]}/#{machine_name}/*.log")
   s = log2csv(machine_name, filepaths)
