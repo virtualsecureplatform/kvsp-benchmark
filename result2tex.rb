@@ -127,7 +127,7 @@ class Hash
 end
 
 def yn(b)
-  if b then "Y" else "N" end
+  if b then "Yes" else "No" end
 end
 
 def log2csv(machine_name, filepaths)
@@ -234,11 +234,7 @@ def log2csv(machine_name, filepaths)
 
   sio = StringIO.new
   table.each do |key, value|
-    machine = if key[:gpus] == 0
-        machine_name
-      else
-        "#{machine_name} w/ V100x#{key[:gpus]}"
-      end
+    machine = machine_name
     pipeline = yn(key[:processor] == :ruby)
     cmuxmem = yn(key[:cmuxmem])
     program = case key[:program]
@@ -254,9 +250,11 @@ def log2csv(machine_name, filepaths)
     num_cycles = value[:num_cycles]
     runtime = sprintf("%.02f", value[:runtime].mean)
     sec_per_cycle = sprintf("%.02f", value[:runtime].mean / value[:num_cycles])
+    ntries = value[:runtime].size
 
     sio.print [
                 machine,
+                key[:gpus],
                 pipeline,
                 cmuxmem,
                 program,
@@ -265,13 +263,13 @@ def log2csv(machine_name, filepaths)
                 sec_per_cycle,
               ].join(" & ")
     sio.print " \\\\"
-    sio.puts "%\t#{value[:runtime].size}"
+    sio.puts "%\t#{ntries} #{if ntries == 1 then "try" else "tries" end}"
   end
 
   sio.string
 end
 
-puts "% machine & pipeline? & CMUX Memory? & program & \# of cycles & runtime & sec./cycle\\\\"
+puts "% Machine & \\# of V100 & Pipelining? & CMUX Memory? & Program & \\# of cycles & Runtime & sec./cycle\\\\"
 Dir.each_child(ARGV[0]) do |machine_name|
   filepaths = Dir.glob("#{ARGV[0]}/#{machine_name}/*.log")
   s = log2csv(machine_name, filepaths)
