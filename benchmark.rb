@@ -53,7 +53,7 @@ class KVSPRunner
     @id_prefix = "v#{version}_#{@cahp_proc}_#{@num_gpus}gpu_#{@cmux_memory ? "wCM" : "woCM"}_"
   end
 
-  def bench(c_path, cmd_options)
+  def bench(c_path, cmd_options, x8_result)
     id = @id_prefix + c_path.basename(".*").to_s
 
     # Compile
@@ -76,7 +76,10 @@ class KVSPRunner
     kvsp_run id, ["genbkey", "-i", "_secret.key", "-o", "_bootstrapping.key"]
     kvsp_run id, ["enc", "-k", "_secret.key", "-i", "_elf", "-o", "_req.packet", "-cahp-cpu", @cahp_proc], cmd_options
     kvsp_run id, ["run", "-bkey", "_bootstrapping.key", "-i", "_req.packet", "-o", "_res.packet", "-c", num_cycles, "-g", @num_gpus, "--cahp-cpu", @cahp_proc]
-    kvsp_run id, ["dec", "-k", "_secret.key", "-i", "_res.packet"]
+    res = kvsp_run id, ["dec", "-k", "_secret.key", "-i", "_res.packet"]
+    unless res =~ /^x8\t([0-9]+)$/ and x8_result == $1.to_i
+      raise "CRITICAL ERROR! THE EVAL RESULT WAS WRONG: expected #{x8_result} but got #{$1.to_i}\n#{res}"
+    end
 
     ctxt_size = run_command "du", ["-b", "_req.packet"]
     raise "du failed" unless ctxt_size =~ /^([0-9]+)\t_req\.packet$/
@@ -128,10 +131,10 @@ runner = KVSPRunner.new(version: version,
                         num_gpus: num_gpus,
                         cmux_memory: cmux_memory)
 program_and_data = [
-  ["01_fib.c", ["5"]],
-  ["02_hamming.c", ["10", "10", "10", "10", "de", "ad", "be", "ef"]],
-  ["03_bf.c", ["++++[>++++++++++<-]>++"]],
-].map { |p| [Pathname.new(p[0]), p[1]] }
+  ["01_fib.c", ["5"], 5],
+  ["02_hamming.c", ["10", "10", "10", "10", "de", "ad", "be", "ef"], 24],
+  ["03_bf.c", ["++++[>++++++++++<-]>++"], 42],
+].map { |p| [Pathname.new(p[0]), p[1], p[2]] }
 
 # Run
 program_and_data.each do |p|
