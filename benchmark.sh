@@ -10,13 +10,13 @@
 
 print_usage_and_exit() {
     echo "Usage: $0 speed [-g NGPUS]"
-    echo "       $0 bottleneck [emerald|diamond] [-g NGPUS]"
+    echo "       $0 bottleneck [pearl|ruby] [-g NGPUS]"
     exit 1
 }
 
 [ $# -lt 1 ] && print_usage_and_exit
 
-KVSP_VER=25
+KVSP_VER=26
 
 # Download kvsp if not exists
 if [ ! -f "kvsp_v$KVSP_VER/bin/kvsp" ]; then
@@ -37,12 +37,6 @@ case "$1" in
         bundle install || ( echo "Please install bundler. For example: 'gem install bundler'" && false )
 
         # Run
-        ## Until v21
-        #bundle exec ruby benchmark.rb --kvsp-ver $KVSP_VER --superscalar --cmux-memory "$@"
-        #bundle exec ruby benchmark.rb --kvsp-ver $KVSP_VER --cmux-memory "$@"
-        #bundle exec ruby benchmark.rb --kvsp-ver $KVSP_VER "$@"
-        #bundle exec ruby benchmark.rb --kvsp-ver $KVSP_VER --superscalar "$@"
-        ## Since v22
         bundle exec ruby benchmark.rb --kvsp-ver $KVSP_VER --pearl --cmux-memory "$@"
         bundle exec ruby benchmark.rb --kvsp-ver $KVSP_VER --ruby --cmux-memory "$@"
         bundle exec ruby benchmark.rb --kvsp-ver $KVSP_VER --pearl "$@"
@@ -55,16 +49,8 @@ case "$1" in
     bottleneck )
         shift
 
-        processor=pearl
+        processor=ruby
         case "$1" in
-            diamond )
-                processor=diamond
-                shift
-                ;;
-            emerald)
-                processor=emerald
-                shift
-                ;;
             ruby)
                 processor=ruby
                 shift
