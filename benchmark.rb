@@ -114,6 +114,7 @@ version = nil
 num_gpus = 0
 cahp_proc = "pearl"
 cmux_memory = false
+output_file = ""
 opt = OptionParser.new
 opt.on("--kvsp-ver VERSION") { |v| version = v.to_i }
 opt.on("-g NGPUS") { |v| num_gpus = v.to_i }  # GPU
@@ -121,11 +122,12 @@ opt.on("--pearl") { |v| cahp_proc = "pearl" }
 opt.on("--ruby") { |v| cahp_proc = "ruby" }
 opt.on("--emerald") { |v| cahp_proc = "emerald" }
 opt.on("--cmux-memory") { |v| cmux_memory = v } # CMUX Memory
+opt.on("--output OUTPUT-FILE") { |v| output_file = v }
 opt.parse!(ARGV)
 raise "Specify KVSP version with option --kvsp-ver" if version.nil?
 
 # Prepare
-Logger.open(Time.now.strftime "%Y%m%d_%H%M.log")
+Logger.open(Time.now.strftime output_file)
 runner = KVSPRunner.new(version: version,
                         cahp_proc: cahp_proc,
                         num_gpus: num_gpus,

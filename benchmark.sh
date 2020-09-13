@@ -25,9 +25,13 @@ if [ ! -f "kvsp_v$KVSP_VER/bin/kvsp" ]; then
 fi
 # Download faststat if not exists
 if [ ! -f faststat ]; then
-    curl -o faststat -L https://github.com/ushitora-anqou/faststat/releases/download/v0.0.1/faststat
+    curl -o faststat -L https://github.com/ushitora-anqou/faststat/releases/download/v0.0.2/faststat
     chmod +x faststat
 fi
+
+# Kill all children at exit
+# Thanks to: https://stackoverflow.com/a/2173421
+trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM EXIT
 
 case "$1" in
     speed )
@@ -36,11 +40,27 @@ case "$1" in
         # Prepare Ruby gems
         bundle install || ( echo "Please install bundler. For example: 'gem install bundler'" && false )
 
-        # Run
-        bundle exec ruby benchmark.rb --kvsp-ver $KVSP_VER --pearl --cmux-memory "$@"
-        bundle exec ruby benchmark.rb --kvsp-ver $KVSP_VER --ruby --cmux-memory "$@"
-        bundle exec ruby benchmark.rb --kvsp-ver $KVSP_VER --pearl "$@"
-        bundle exec ruby benchmark.rb --kvsp-ver $KVSP_VER --ruby "$@"
+        # Make directory for results
+        results_dir=$(date +'speed-%Y%m%d%H%M%S')
+        mkdir $results_dir
+
+        # Log useful information about run
+        sudo ./getlinuxinfo.sh "$results_dir"
+
+        # Run faststat
+        faststat_logfile="$results_dir/faststat.log"
+        ./faststat -t 0.1 \
+            time cpu.user cpu.nice cpu.sys cpu.idle cpu.iowait cpu.irq cpu.softirq \
+            cpu.steal mem.total mem.used mem.free mem.shared mem.buff_cache mem.available \
+            mem.swap.total mem.swap.used mem.swap.free nvml.temp nvml.power nvml.usage \
+            nvml.mem.used nvml.mem.free nvml.mem.total \
+            > $faststat_logfile &
+
+        # Run benchmark.rb
+        #bundle exec ruby benchmark.rb --kvsp-ver $KVSP_VER --output "$results_dir/benchmark_rb.log" --pearl --cmux-memory "$@"
+        bundle exec ruby benchmark.rb --kvsp-ver $KVSP_VER --output "$results_dir/benchmark_rb.log" --ruby --cmux-memory "$@"
+        bundle exec ruby benchmark.rb --kvsp-ver $KVSP_VER --output "$results_dir/benchmark_rb.log" --pearl "$@"
+        bundle exec ruby benchmark.rb --kvsp-ver $KVSP_VER --output "$results_dir/benchmark_rb.log" --ruby "$@"
 
         # Cleanup
         rm _*
@@ -62,10 +82,6 @@ case "$1" in
         esac
         echo "Using processor: $processor"
 
-        # Kill all children at exit
-        # Thanks to: https://stackoverflow.com/a/2173421
-        trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM EXIT
-
         # Prepare request packet
         kvsp_v$KVSP_VER/bin/kvsp cc 03_bf.c -o _elf
         kvsp_v$KVSP_VER/bin/kvsp genkey -o _sk
@@ -84,7 +100,10 @@ case "$1" in
 
         # Run faststat
         faststat_logfile="$results_dir/faststat.log"
-        ./faststat -t 0.1 > $faststat_logfile &
+        ./faststat -t 0.1 \
+            time cpu.user cpu.nice cpu.sys cpu.idle cpu.iowait cpu.irq cpu.softirq \
+            cpu.steal nvml.temp nvml.power nvml.usage nvml.mem.used nvml.mem.free \
+            nvml.mem.total > $faststat_logfile &
 
         # Run kvsp
         kvsp_logfile="$results_dir/kvsp.log"
