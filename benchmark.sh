@@ -16,7 +16,7 @@ print_usage_and_exit() {
 
 [ $# -lt 1 ] && print_usage_and_exit
 
-KVSP_VER=26
+KVSP_VER=28
 
 # Download kvsp if not exists
 if [ ! -f "kvsp_v$KVSP_VER/bin/kvsp" ]; then
@@ -57,7 +57,7 @@ case "$1" in
             > $faststat_logfile &
 
         # Run benchmark.rb
-        #bundle exec ruby benchmark.rb --kvsp-ver $KVSP_VER --output "$results_dir/benchmark_rb.log" --pearl --cmux-memory "$@"
+        bundle exec ruby benchmark.rb --kvsp-ver $KVSP_VER --output "$results_dir/benchmark_rb.log" --pearl --cmux-memory "$@"
         bundle exec ruby benchmark.rb --kvsp-ver $KVSP_VER --output "$results_dir/benchmark_rb.log" --ruby --cmux-memory "$@"
         bundle exec ruby benchmark.rb --kvsp-ver $KVSP_VER --output "$results_dir/benchmark_rb.log" --pearl "$@"
         bundle exec ruby benchmark.rb --kvsp-ver $KVSP_VER --output "$results_dir/benchmark_rb.log" --ruby "$@"
