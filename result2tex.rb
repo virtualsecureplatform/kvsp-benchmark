@@ -263,7 +263,7 @@ def log2csv(machine_name, filepaths)
                 sec_per_cycle,
               ].join(" & ")
     sio.print " \\\\"
-    sio.puts "%\t#{ntries} #{if ntries == 1 then "try" else "tries" end}"
+    sio.puts "%\t#{value[:runtime].standard_deviation}\t#{ntries} #{if ntries == 1 then "try" else "tries" end}"
   end
 
   sio.string
