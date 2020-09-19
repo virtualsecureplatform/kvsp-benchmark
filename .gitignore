@@ -3,3 +3,7 @@ tmp
 _*
 kvsp.tar.gz
 kvsp_v*
+.byebug_history
+faststat
+*.snapshot
+speed-*
