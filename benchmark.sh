@@ -39,7 +39,9 @@ case "$1" in
 
         KVSP_VER=10001
         if [ ! -f "kvsp_v$KVSP_VER/bin/kvsp" ]; then
-            echo "Please download KVSP for 1KiB ROM/RAM manually and save it as v$KVSP_VER." && false
+            curl -L https://github.com/virtualsecureplatform/kvsp/releases/download/v29/kvsp_1KiB.tar.gz |\
+            tar zx
+            mv kvsp_v29_1KiB "kvsp_v$KVSP_VER"
         fi
 
         # Prepare Ruby gems
