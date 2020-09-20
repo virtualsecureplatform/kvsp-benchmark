@@ -65,7 +65,7 @@ case "$1" in
 
         # Run benchmark.rb
         bundle exec ruby benchmark.rb --kvsp-ver $KVSP_VER --output "$results_dir/benchmark_rb.log" --ruby --cmux-memory "$@"
-        bundle exec ruby benchmark.rb --kvsp-ver $KVSP_VER --output "$results_dir/benchmark_rb.log" --ruby "$@"
+        #bundle exec ruby benchmark.rb --kvsp-ver $KVSP_VER --output "$results_dir/benchmark_rb.log" --ruby "$@"
 
         # Cleanup
         rm _*
