@@ -52,7 +52,7 @@ case "$1" in
         mkdir $results_dir
 
         # Log useful information about run
-        sudo ./getlinuxinfo.sh "$results_dir"||true
+        #sudo ./getlinuxinfo.sh "$results_dir"
 
         # Run faststat
         faststat_logfile="$results_dir/faststat.log"
@@ -82,7 +82,7 @@ case "$1" in
         mkdir $results_dir
 
         # Log useful information about run
-        sudo ./getlinuxinfo.sh "$results_dir"||true
+        #sudo ./getlinuxinfo.sh "$results_dir"
 
         # Run faststat
         faststat_logfile="$results_dir/faststat.log"
@@ -133,7 +133,7 @@ case "$1" in
         mkdir $results_dir
 
         # Log useful information about run
-        sudo ./getlinuxinfo.sh "$results_dir"
+        #sudo ./getlinuxinfo.sh "$results_dir"
 
         # Run faststat
         faststat_logfile="$results_dir/faststat.log"
