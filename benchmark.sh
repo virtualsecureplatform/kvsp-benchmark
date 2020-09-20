@@ -34,6 +34,41 @@ fi
 trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM EXIT
 
 case "$1" in
+    speed-1KiB )
+        shift
+
+        KVSP_VER=10001
+        if [ ! -f "kvsp_v$KVSP_VER/bin/kvsp" ]; then
+            echo "Please download KVSP for 1KiB ROM/RAM manually and save it as v$KVSP_VER." && false
+        fi
+
+        # Prepare Ruby gems
+        bundle install || ( echo "Please install bundler. For example: 'gem install bundler'" && false )
+
+        # Make directory for results
+        results_dir=$(date +'speed-1KiB-%Y%m%d%H%M%S')
+        mkdir $results_dir
+
+        # Log useful information about run
+        sudo ./getlinuxinfo.sh "$results_dir"
+
+        # Run faststat
+        faststat_logfile="$results_dir/faststat.log"
+        ./faststat -t 0.1 \
+            time cpu.user cpu.nice cpu.sys cpu.idle cpu.iowait cpu.irq cpu.softirq \
+            cpu.steal mem.total mem.used mem.free mem.shared mem.buff_cache mem.available \
+            mem.swap.total mem.swap.used mem.swap.free nvml.temp nvml.power nvml.usage \
+            nvml.mem.used nvml.mem.free nvml.mem.total \
+            > $faststat_logfile &
+
+        # Run benchmark.rb
+        bundle exec ruby benchmark.rb --kvsp-ver $KVSP_VER --output "$results_dir/benchmark_rb.log" --ruby --cmux-memory "$@"
+        bundle exec ruby benchmark.rb --kvsp-ver $KVSP_VER --output "$results_dir/benchmark_rb.log" --ruby "$@"
+
+        # Cleanup
+        rm _*
+        ;;
+
     speed )
         shift
 
