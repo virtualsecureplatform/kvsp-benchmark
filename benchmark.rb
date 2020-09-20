@@ -74,7 +74,7 @@ class KVSPRunner
     # Run
     kvsp_run id, ["genkey", "-o", "_secret.key"]
     kvsp_run id, ["genbkey", "-i", "_secret.key", "-o", "_bootstrapping.key"]
-    kvsp_run id, ["enc", "-k", "_secret.key", "-i", "_elf", "-o", "_req.packet", "-cahp-cpu", @cahp_proc], cmd_options
+    kvsp_run id, ["enc", "-k", "_secret.key", "-i", "_elf", "-o", "_req.packet"], cmd_options
     kvsp_run id, ["run", "-bkey", "_bootstrapping.key", "-i", "_req.packet", "-o", "_res.packet", "-c", num_cycles, "-g", @num_gpus, "--cahp-cpu", @cahp_proc]
     res = kvsp_run id, ["dec", "-k", "_secret.key", "-i", "_res.packet"]
     unless res =~ /^x8\t([0-9]+)$/ and x8_result == $1.to_i
