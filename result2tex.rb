@@ -96,6 +96,7 @@
 =end
 
 require "csv"
+require "pretty_round"
 
 # Thanks to: https://stackoverflow.com/a/7749613
 module Enumerable
@@ -247,10 +248,20 @@ def log2csv(machine_name, filepaths)
       else
         raise "Invalid program"
       end
+
     num_cycles = value[:num_cycles]
-    runtime = sprintf("%.02f", value[:runtime].mean)
-    sec_per_cycle = sprintf("%.02f", value[:runtime].mean / value[:num_cycles])
     ntries = value[:runtime].size
+
+    if value[:runtime].length == 1 then
+      runtime = sprintf("$%.1f \\pm NaN$", value[:runtime].mean)
+      sec_per_cycle = sprintf("$%.02f \\pm NaN$", value[:runtime].mean / value[:num_cycles])
+    else
+      runtimestdv = value[:runtime].standard_deviation
+      runtimemean = value[:runtime].mean
+      runtimedigit = (Math.log10(runtimemean)-Math.log10(runtimestdv)).floor + 1
+      runtime = sprintf("$%.1f \\pm %.1f$", runtimemean.sround(runtimedigit+1),runtimestdv)
+      sec_per_cycle = sprintf("$%.03f \\pm %.3f$", runtimemean / num_cycles,runtimestdv/num_cycles)
+    end
 
     sio.print [
                 machine,

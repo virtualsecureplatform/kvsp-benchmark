@@ -20,6 +20,7 @@ GEM
       concurrent-ruby (~> 1.0)
     minitest (5.14.0)
     multipart-post (2.1.1)
+    pretty_round (0.2.0)
     slack-ruby-client (0.14.6)
       activesupport
       faraday (>= 0.9)
@@ -42,6 +43,7 @@ PLATFORMS
 
 DEPENDENCIES
   gnuplot
+  pretty_round
   slack-ruby-client
   toml-rb
 
