@@ -125,7 +125,7 @@ case "$1" in
         kvsp_v$KVSP_VER/bin/kvsp cc 03_bf.c -o _elf
         kvsp_v$KVSP_VER/bin/kvsp genkey -o _sk
         kvsp_v$KVSP_VER/bin/kvsp genbkey -i _sk -o _bk
-        kvsp_v$KVSP_VER/bin/kvsp enc -k _sk -i _elf -o _req.packet -cahp-cpu $processor
+        kvsp_v$KVSP_VER/bin/kvsp enc -k _sk -i _elf -o _req.packet
 
         # Prepare KVSP's blueprint. Turn CMUX Memory on.
         bundle exec ruby change_blueprint.rb --cmux-memory "kvsp_v$KVSP_VER/share/kvsp/cahp-$processor.toml"
