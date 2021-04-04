@@ -79,6 +79,10 @@ AWS p3.16xlarge with Ubuntu 18.04 AMI setup (we recommend to expand EBS to 12GB.
 ```
 git clone https://github.com/virtualsecureplatform/kvsp-benchmark.git&&cd kvsp-benchmark&&sudo apt update&&sudo apt upgrade -y&&sudo apt install -y ruby ruby-dev libgoogle-perftools-dev libomp-dev build-essential nvidia-driver-440&&sudo gem install bundler -v 2.1.4 &&sudo gem install websocket-driver -v '0.7.1' --source 'https://rubygems.org/'&&bundle install&&sudo reboot
 ```
+GCP with Ubuntu 18.04
+```
+sudo apt update&&sudo apt upgrade -y && sudo apt install -y ruby ruby-dev libgoogle-perftools-dev libomp-dev build-essential nvidia-driver-460 git&&git clone https://github.com/virtualsecureplatform/kvsp-benchmark.git&&cd kvsp-benchmark&&sudo gem install bundler -v 2.1.4 &&sudo gem install websocket-driver -v '0.7.1' --source 'https://rubygems.org/'&&bundle install&&sudo reboot
+```
 AWS p3.8xlarge with Ubuntu 20.04 AMI
 ```
 git clone https://github.com/virtualsecureplatform/kvsp-benchmark.git&&cd kvsp-benchmark&&sudo apt update&&sudo apt upgrade -y&&sudo apt install -y ruby ruby-dev libgoogle-perftools-dev libomp-dev build-essential nvidia-driver-460 libz3-dev &&sudo gem install bundler -v 2.1.4 &&sudo gem install websocket-driver -v '0.7.1' --source 'https://rubygems.org/'&&bundle install&&sudo reboot
