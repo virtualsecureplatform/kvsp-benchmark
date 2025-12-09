@@ -398,8 +398,8 @@ else
     cd kvsp-benchmark
 fi
 
-# Install Ruby dependencies
-bundle install
+# Install Ruby dependencies (use sudo for system-wide install)
+sudo bundle install
 
 echo "Setup complete"
 '
