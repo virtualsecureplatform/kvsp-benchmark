@@ -6,3 +6,4 @@ kvsp_v*
 faststat
 *.snapshot
 speed-*
+Gemfile.lock
