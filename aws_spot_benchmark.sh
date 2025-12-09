@@ -327,6 +327,8 @@ cd kvsp-benchmark
 
 # Download kvsp v$kvsp_ver if not exists
 if [ ! -f \"kvsp_v${kvsp_ver}/bin/kvsp\" ]; then
+    # Try new naming convention first (kvsp_vNN.tar.gz), then fall back to old (kvsp.tar.gz)
+    curl -L https://github.com/virtualsecureplatform/kvsp/releases/download/v${kvsp_ver}/kvsp_v${kvsp_ver}.tar.gz | tar zx || \\
     curl -L https://github.com/virtualsecureplatform/kvsp/releases/download/v${kvsp_ver}/kvsp.tar.gz | tar zx
 fi
 
