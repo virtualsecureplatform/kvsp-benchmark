@@ -152,6 +152,15 @@ get_default_subnet() {
         --output text
 }
 
+get_all_subnets() {
+    local vpc_id=$1
+    aws ec2 describe-subnets \
+        --region "$REGION" \
+        --filters "Name=vpc-id,Values=$vpc_id" \
+        --query 'Subnets[*].SubnetId' \
+        --output text
+}
+
 create_security_group() {
     local vpc_id=$1
     local sg_name="kvsp-benchmark-sg-$(date +%Y%m%d%H%M%S)"
@@ -187,6 +196,110 @@ get_spot_price() {
         --start-time "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
         --query 'SpotPriceHistory[0].SpotPrice' \
         --output text 2>/dev/null || echo ""
+}
+
+# Request spot instance and wait for fulfillment
+# Returns instance ID on success, empty string on failure
+# Sets SPOT_REQUEST_ID global variable
+request_spot_instance() {
+    local subnet_id=$1
+    local security_group_id=$2
+    local ami_id=$3
+    local instance_type=$4
+    local key_name=$5
+    local spot_options=$6
+
+    local spot_request_json
+    spot_request_json=$(cat <<EOF
+{
+    "ImageId": "$ami_id",
+    "InstanceType": "$instance_type",
+    "KeyName": "$key_name",
+    "SecurityGroupIds": ["$security_group_id"],
+    "SubnetId": "$subnet_id",
+    "BlockDeviceMappings": [
+        {
+            "DeviceName": "/dev/sda1",
+            "Ebs": {
+                "VolumeSize": 100,
+                "VolumeType": "gp3",
+                "DeleteOnTermination": true
+            }
+        }
+    ]
+}
+EOF
+)
+
+    local spot_response
+    spot_response=$(aws ec2 request-spot-instances \
+        --region "$REGION" \
+        --instance-count 1 \
+        --type "one-time" \
+        $spot_options \
+        --launch-specification "$spot_request_json" \
+        --output json 2>&1)
+
+    if [[ $? -ne 0 ]]; then
+        echo ""
+        return 1
+    fi
+
+    SPOT_REQUEST_ID=$(echo "$spot_response" | jq -r '.SpotInstanceRequests[0].SpotInstanceRequestId')
+
+    if [[ -z "$SPOT_REQUEST_ID" || "$SPOT_REQUEST_ID" == "null" ]]; then
+        echo ""
+        return 1
+    fi
+
+    # Wait for spot request to be fulfilled (max 60 seconds per AZ)
+    local max_wait=60
+    local waited=0
+    local instance_id=""
+
+    while [[ $waited -lt $max_wait ]]; do
+        local spot_status
+        spot_status=$(aws ec2 describe-spot-instance-requests \
+            --region "$REGION" \
+            --spot-instance-request-ids "$SPOT_REQUEST_ID" \
+            --query 'SpotInstanceRequests[0].Status.Code' \
+            --output text 2>/dev/null)
+
+        instance_id=$(aws ec2 describe-spot-instance-requests \
+            --region "$REGION" \
+            --spot-instance-request-ids "$SPOT_REQUEST_ID" \
+            --query 'SpotInstanceRequests[0].InstanceId' \
+            --output text 2>/dev/null)
+
+        if [[ "$spot_status" == "fulfilled" && "$instance_id" != "None" && -n "$instance_id" ]]; then
+            echo "$instance_id"
+            return 0
+        elif [[ "$spot_status" == "price-too-low" ]]; then
+            # Cancel the request
+            aws ec2 cancel-spot-instance-requests \
+                --region "$REGION" \
+                --spot-instance-request-ids "$SPOT_REQUEST_ID" >/dev/null 2>&1
+            echo "price-too-low"
+            return 1
+        elif [[ "$spot_status" == "capacity-not-available" ]]; then
+            # Cancel the request and try next AZ
+            aws ec2 cancel-spot-instance-requests \
+                --region "$REGION" \
+                --spot-instance-request-ids "$SPOT_REQUEST_ID" >/dev/null 2>&1
+            echo "capacity-not-available"
+            return 1
+        fi
+
+        sleep 5
+        waited=$((waited + 5))
+    done
+
+    # Timeout - cancel and return
+    aws ec2 cancel-spot-instance-requests \
+        --region "$REGION" \
+        --spot-instance-request-ids "$SPOT_REQUEST_ID" >/dev/null 2>&1
+    echo "timeout"
+    return 1
 }
 
 wait_for_instance() {
@@ -531,22 +644,24 @@ if [[ -z "$AMI_ID" ]]; then
 fi
 log_info "Using AMI: $AMI_ID"
 
-# Get VPC and subnet if not specified
+# Get VPC and subnets
 if [[ -z "$SUBNET_ID" ]]; then
-    log_info "Finding default VPC and subnet..."
+    log_info "Finding default VPC and subnets..."
     VPC_ID=$(get_default_vpc)
     if [[ -z "$VPC_ID" || "$VPC_ID" == "None" ]]; then
         log_error "No default VPC found. Please specify a subnet with -s"
         exit 1
     fi
-    SUBNET_ID=$(get_default_subnet "$VPC_ID")
-    log_info "Using VPC: $VPC_ID, Subnet: $SUBNET_ID"
+    # Get all subnets for AZ retry
+    SUBNETS=($(get_all_subnets "$VPC_ID"))
+    log_info "Using VPC: $VPC_ID with ${#SUBNETS[@]} availability zones"
 else
     VPC_ID=$(aws ec2 describe-subnets \
         --region "$REGION" \
         --subnet-ids "$SUBNET_ID" \
         --query 'Subnets[0].VpcId' \
         --output text)
+    SUBNETS=("$SUBNET_ID")
 fi
 
 # Create security group if not specified
@@ -567,82 +682,54 @@ if [[ "$DRY_RUN" == "true" ]]; then
     exit 0
 fi
 
-# Request spot instance
-log_info "Requesting spot instance..."
-
-SPOT_REQUEST_JSON=$(cat <<EOF
-{
-    "ImageId": "$AMI_ID",
-    "InstanceType": "$INSTANCE_TYPE",
-    "KeyName": "$KEY_NAME",
-    "SecurityGroupIds": ["$SECURITY_GROUP_ID"],
-    "SubnetId": "$SUBNET_ID",
-    "BlockDeviceMappings": [
-        {
-            "DeviceName": "/dev/sda1",
-            "Ebs": {
-                "VolumeSize": 100,
-                "VolumeType": "gp3",
-                "DeleteOnTermination": true
-            }
-        }
-    ]
-}
-EOF
-)
-
+# Prepare spot options
 SPOT_OPTIONS="--instance-interruption-behavior terminate"
 if [[ -n "$MAX_PRICE" ]]; then
     SPOT_OPTIONS="$SPOT_OPTIONS --spot-price $MAX_PRICE"
 fi
 
-SPOT_RESPONSE=$(aws ec2 request-spot-instances \
-    --region "$REGION" \
-    --instance-count 1 \
-    --type "one-time" \
-    $SPOT_OPTIONS \
-    --launch-specification "$SPOT_REQUEST_JSON" \
-    --output json)
+# Try each availability zone until we get capacity
+INSTANCE_ID=""
+TRIED_AZS=0
 
-SPOT_REQUEST_ID=$(echo "$SPOT_RESPONSE" | jq -r '.SpotInstanceRequests[0].SpotInstanceRequestId')
-log_info "Spot request ID: $SPOT_REQUEST_ID"
+for subnet in "${SUBNETS[@]}"; do
+    TRIED_AZS=$((TRIED_AZS + 1))
 
-# Wait for spot request to be fulfilled
-log_info "Waiting for spot request to be fulfilled..."
-MAX_SPOT_WAIT=600
-SPOT_WAITED=0
-
-while [[ $SPOT_WAITED -lt $MAX_SPOT_WAIT ]]; do
-    SPOT_STATUS=$(aws ec2 describe-spot-instance-requests \
+    # Get AZ name for this subnet
+    AZ_NAME=$(aws ec2 describe-subnets \
         --region "$REGION" \
-        --spot-instance-request-ids "$SPOT_REQUEST_ID" \
-        --query 'SpotInstanceRequests[0].Status.Code' \
-        --output text)
+        --subnet-ids "$subnet" \
+        --query 'Subnets[0].AvailabilityZone' \
+        --output text 2>/dev/null || echo "unknown")
 
-    INSTANCE_ID=$(aws ec2 describe-spot-instance-requests \
-        --region "$REGION" \
-        --spot-instance-request-ids "$SPOT_REQUEST_ID" \
-        --query 'SpotInstanceRequests[0].InstanceId' \
-        --output text)
+    log_info "Trying availability zone: $AZ_NAME (subnet: $subnet) [$TRIED_AZS/${#SUBNETS[@]}]"
 
-    if [[ "$SPOT_STATUS" == "fulfilled" && "$INSTANCE_ID" != "None" && -n "$INSTANCE_ID" ]]; then
-        log_success "Spot request fulfilled, Instance ID: $INSTANCE_ID"
-        break
-    elif [[ "$SPOT_STATUS" == "price-too-low" ]]; then
+    # Use || true to prevent set -e from exiting on failure
+    result=$(request_spot_instance "$subnet" "$SECURITY_GROUP_ID" "$AMI_ID" "$INSTANCE_TYPE" "$KEY_NAME" "$SPOT_OPTIONS") || true
+
+    if [[ "$result" == "capacity-not-available" ]]; then
+        log_warn "No capacity in $AZ_NAME, trying next..."
+        continue
+    elif [[ "$result" == "price-too-low" ]]; then
         log_error "Spot price too low. Current price: $CURRENT_SPOT_PRICE"
         exit 1
-    elif [[ "$SPOT_STATUS" == "capacity-not-available" ]]; then
-        log_error "No capacity available for $INSTANCE_TYPE in $REGION"
-        exit 1
+    elif [[ "$result" == "timeout" ]]; then
+        log_warn "Timeout waiting for capacity in $AZ_NAME, trying next..."
+        continue
+    elif [[ -n "$result" && "$result" != "" ]]; then
+        INSTANCE_ID="$result"
+        log_success "Spot request fulfilled in $AZ_NAME, Instance ID: $INSTANCE_ID"
+        break
+    else
+        log_warn "Failed to request spot instance in $AZ_NAME, trying next..."
+        continue
     fi
-
-    echo -n "."
-    sleep 10
-    SPOT_WAITED=$((SPOT_WAITED + 10))
 done
 
 if [[ -z "$INSTANCE_ID" || "$INSTANCE_ID" == "None" ]]; then
-    log_error "Failed to get instance from spot request"
+    log_error "No capacity available for $INSTANCE_TYPE in any availability zone in $REGION"
+    log_info "Tip: Try a different region with -r option (e.g., us-west-2, us-east-2)"
+    log_info "Tip: Check spot instance advisor: https://aws.amazon.com/ec2/spot/instance-advisor/"
     exit 1
 fi
 
