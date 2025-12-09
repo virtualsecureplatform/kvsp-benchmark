@@ -16,10 +16,13 @@ print_usage_and_exit() {
 
 [ $# -lt 1 ] && print_usage_and_exit
 
-KVSP_VER=29
+KVSP_VER=34
 
 # Download kvsp if not exists
 if [ ! -f "kvsp_v$KVSP_VER/bin/kvsp" ]; then
+    # Try new naming convention first (kvsp_vNN.tar.gz), then fall back to old (kvsp.tar.gz)
+    curl -L https://github.com/virtualsecureplatform/kvsp/releases/download/v$KVSP_VER/kvsp_v$KVSP_VER.tar.gz | \
+    tar zx || \
     curl -L https://github.com/virtualsecureplatform/kvsp/releases/download/v$KVSP_VER/kvsp.tar.gz | \
     tar zx
 fi
