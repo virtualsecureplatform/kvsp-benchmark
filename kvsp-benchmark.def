@@ -1,0 +1,51 @@
+Bootstrap: docker
+From: ubuntu:24.04
+
+%labels
+    Version 1.0
+    Description KVSP benchmark environment based on Ubuntu 24.04
+
+%post
+    export DEBIAN_FRONTEND=noninteractive
+    apt-get update -y
+    apt-get install -y \
+        ruby \
+        ruby-dev \
+        libgoogle-perftools-dev \
+        libomp-dev \
+        libz3-dev \
+        build-essential \
+        curl \
+        ca-certificates \
+        gnuplot \
+        git
+
+    # Install bundler
+    gem install bundler
+
+    # Pre-install all required Ruby gems to /opt/bundle so they are
+    # available at runtime without needing network access or write
+    # access to the system gem path.
+    mkdir -p /opt/kvsp-benchmark
+    cat > /opt/kvsp-benchmark/Gemfile << 'ENDOFGEMFILE'
+source "https://rubygems.org"
+
+gem "slack-ruby-client"
+gem "toml-rb"
+gem "gnuplot"
+gem "pretty_round"
+ENDOFGEMFILE
+
+    cd /opt/kvsp-benchmark
+    bundle config set --local path /opt/bundle
+    bundle install
+
+%environment
+    # Force bundler to use the container's pre-installed gem config,
+    # ignoring any local .bundle/config in the project directory.
+    export BUNDLE_APP_CONFIG=/opt/kvsp-benchmark/.bundle
+    export LC_ALL=C.UTF-8
+    export LANG=C.UTF-8
+
+%runscript
+    exec "$@"

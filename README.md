@@ -57,6 +57,78 @@ $ bundle install
 $ bundle exec ruby bottleneck2graph.rb -f 7 -t 10 faststat.log kvsp.log # -f and -t option can be omitted.
 ```
 
+## Running with Singularity (HPC / Supercomputers)
+
+Singularity (or [Apptainer](https://apptainer.org/)) is the container runtime commonly used in HPC environments. The provided `kvsp-benchmark.def` builds a self-contained image based on Ubuntu 24.04 with all required dependencies pre-installed.
+
+### Build the container image
+
+Build on a machine where you have root or fakeroot access (e.g. your local workstation):
+
+```
+git clone https://github.com/virtualsecureplatform/kvsp-benchmark.git
+cd kvsp-benchmark
+
+# With sudo:
+sudo singularity build kvsp-benchmark.sif kvsp-benchmark.def
+
+# Or with fakeroot (no sudo required if fakeroot is enabled):
+singularity build --fakeroot kvsp-benchmark.sif kvsp-benchmark.def
+```
+
+### Transfer to the supercomputer
+
+```
+scp kvsp-benchmark.sif user@supercomputer:/path/to/workdir/
+scp -r . user@supercomputer:/path/to/workdir/kvsp-benchmark/
+```
+
+Alternatively, clone the repository directly on the supercomputer and transfer only the `.sif` file.
+
+### Run the benchmark
+
+On the supercomputer, from inside the `kvsp-benchmark` directory:
+
+**With GPU(s):**
+```
+singularity exec --nv --pwd $(pwd) kvsp-benchmark.sif ./benchmark.sh speed -g <NUM_GPUS>
+```
+
+**CPU-only (no GPU):**
+```
+singularity exec --pwd $(pwd) kvsp-benchmark.sif ./benchmark.sh speed
+```
+
+The `--nv` flag passes NVIDIA drivers and CUDA libraries from the host into the container. It is required for GPU benchmarks and for GPU monitoring via `faststat`. Without it, GPU operations and NVML metrics will be unavailable.
+
+> **Note:** Singularity automatically bind-mounts `$HOME` on most systems. If the project directory is outside `$HOME`, add `--bind $(pwd):$(pwd)` to the command.
+
+### Example SLURM job script
+
+```bash
+#!/bin/bash
+#SBATCH --job-name=kvsp-benchmark
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=<NUM_CPUS>
+#SBATCH --gres=gpu:<NUM_GPUS>
+#SBATCH --time=12:00:00
+#SBATCH --output=kvsp-benchmark_%j.log
+
+cd /path/to/kvsp-benchmark
+
+singularity exec --nv --pwd $(pwd) \
+    /path/to/kvsp-benchmark.sif \
+    ./benchmark.sh speed -g <NUM_GPUS>
+```
+
+### Notes
+
+- The benchmark downloads KVSP binaries and `faststat` from GitHub on first run. Internet access is required on the compute node, or pre-download them by running `./benchmark.sh speed` once before the job.
+- Results are written to a timestamped directory (e.g. `speed-20250101120000/`) inside the project directory.
+- The container sets `BUNDLE_APP_CONFIG` to its internal bundler config so gems at `/opt/bundle` are always used, even if the project directory contains a `.bundle/config` pointing elsewhere.
+- The command name may be `apptainer` instead of `singularity` depending on the system.
+
 ## Dependency
 
 There is Slackbot support
